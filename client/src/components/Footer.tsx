@@ -226,7 +226,7 @@ export default function Footer() {
             <Button 
               variant="outline" 
               className="group relative w-full overflow-hidden border-white/10 hover:bg-white/5 text-white"
-              onClick={() => window.open("https://calendly.com/glxpartners", "_blank", "noopener,noreferrer")}
+              onClick={() => window.open("https://wa.me/5511970837585", "_blank", "noopener,noreferrer")}
             >
               <m.div
                 aria-hidden="true"

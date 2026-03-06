@@ -8,7 +8,7 @@ export const en: Translations = {
     plans: "Our Plans",
     cases: "Cases",
     membersArea: "MEMBERS AREA",
-    schedule: "BOOK A DIAGNOSTIC SPRINT",
+    schedule: "Book a Call",
   },
 
   // Hero Section
@@ -20,7 +20,7 @@ export const en: Translations = {
     subtitle: "We transform your operation into",
     subtitleHighlight: "Predictable Net Profit",
     description: "Dashboards + Management Routine + Processes + Automation + AI + Training + Goals. All integrated in one system.",
-    cta: "BOOK A DIAGNOSTIC SPRINT",
+    cta: "Book a Call",
     secondary: "VIEW OUR CASES",
   },
 
@@ -180,10 +180,10 @@ export const en: Translations = {
     password: "Password",
     remember: "Remember me",
     forgot: "Forgot password?",
-    submit: "Access Platform",
+    submit: "Access Dashboard",
     loading: "Signing in...",
     notClient: "Not a client yet?",
-    schedule: "Schedule a diagnosis",
+    schedule: "Book a Call",
     plans: "See our plans",
     back: "Back to Home",
     backShort: "Back",

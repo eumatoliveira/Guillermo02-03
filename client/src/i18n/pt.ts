@@ -6,7 +6,7 @@ export const pt = {
     plans: "Nossos Planos",
     cases: "Cases",
     membersArea: "ÁREA DE MEMBROS",
-    schedule: "AGENDAR SPRINT DIAGNOSTICA",
+    schedule: "Agenda uma Sprint Diagnóstica",
   },
 
   // Hero Section
@@ -18,7 +18,7 @@ export const pt = {
     subtitle: "Transformamos sua operação em",
     subtitleHighlight: "Lucro Líquido Previsível",
     description: "Dashboards + Rotina de Gestão + Processos + Automações + IA + Treinamento + Metas. Tudo integrado em um único sistema.",
-    cta: "AGENDAR SPRINT DIAGNOSTICA",
+    cta: "Agenda uma Sprint Diagnóstica",
     secondary: "VER NOSSOS CASES",
   },
 
@@ -178,10 +178,10 @@ export const pt = {
     password: "Senha",
     remember: "Lembrar-me",
     forgot: "Esqueceu a senha?",
-    submit: "Acessar Plataforma",
+    submit: "Acessar o Dashboard",
     loading: "Entrando...",
     notClient: "Ainda não é cliente?",
-    schedule: "Agende um diagnóstico",
+    schedule: "Agenda uma Sprint Diagnóstica",
     plans: "Conheça nossos planos",
     back: "Voltar para Home",
     backShort: "Voltar",

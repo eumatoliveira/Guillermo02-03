@@ -283,27 +283,18 @@ export const authRouter = router({
   recoverPassword: publicProcedure
     .input(z.object({
       email: z.string().email(),
-      oldPassword: z.string().min(6),
       newPassword: z.string().min(6),
     }))
     .mutation(async ({ input }) => {
       const normalizedEmail = input.email.trim().toLowerCase();
       const user = await getUserByEmail(normalizedEmail);
 
-      if (!user || !user.passwordHash) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Email ou senha antiga inválidos",
-        });
-      }
-
-      const isValidPassword = await bcrypt.compare(input.oldPassword, user.passwordHash);
-
-      if (!isValidPassword) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Email ou senha antiga inválidos",
-        });
+      // Retorna sucesso mesmo se o usuário não existir para evitar enumeração de contas.
+      if (!user || !user.passwordHash || !user.isActive) {
+        return {
+          success: true,
+          message: "Se o e-mail estiver cadastrado, a senha foi atualizada.",
+        };
       }
 
       const newPasswordHash = await bcrypt.hash(input.newPassword, 12);
@@ -318,7 +309,7 @@ export const authRouter = router({
 
       return {
         success: true,
-        message: "Senha atualizada com sucesso",
+        message: "Se o e-mail estiver cadastrado, a senha foi atualizada.",
       };
     }),
   // Change password (authenticated user)

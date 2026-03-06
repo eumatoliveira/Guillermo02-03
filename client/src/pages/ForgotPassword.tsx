@@ -1,50 +1,139 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, m } from "framer-motion";
 import { z } from "zod";
-import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Lock, Mail } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type ForgotPasswordFormValues = {
   email: string;
-  oldPassword: string;
   newPassword: string;
   confirmPassword: string;
 };
 
-const forgotPasswordSchema = z
-  .object({
-    email: z.string().email("Informe um e-mail válido"),
-    oldPassword: z.string().min(6, "A senha antiga deve ter no mínimo 6 caracteres"),
-    newPassword: z.string().min(6, "A nova senha deve ter no mínimo 6 caracteres"),
-    confirmPassword: z.string().min(6, "Confirme a nova senha"),
-  })
-  .refine((data) => data.newPassword !== data.oldPassword, {
-    message: "A nova senha deve ser diferente da senha antiga",
-    path: ["newPassword"],
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "A confirmação da senha não confere",
-    path: ["confirmPassword"],
-  });
+const CONTENT = {
+  pt: {
+    back: "Voltar para login",
+    title: "Esqueceu a senha?",
+    subtitle: "Defina uma nova senha usando seu e-mail corporativo.",
+    emailLabel: "E-mail",
+    emailPlaceholder: "seu@email.com",
+    newPasswordLabel: "Nova senha",
+    newPasswordPlaceholder: "Nova senha",
+    confirmPasswordLabel: "Confirmar nova senha",
+    confirmPasswordPlaceholder: "Repita a nova senha",
+    rulesTitle: "Regras atuais:",
+    rules: [
+      "E-mail deve existir",
+      "Nova senha deve ter no mínimo 6 caracteres",
+      "Confirmação deve ser igual à nova senha",
+    ],
+    submit: "Atualizar senha",
+    submitting: "Atualizando senha...",
+    successTitle: "Senha alterada",
+    successRedirect: "Redirecionando para o login em",
+    toastSuccess: "Senha atualizada com sucesso",
+    toastError: "Não foi possível atualizar a senha",
+    validation: {
+      email: "Informe um e-mail válido",
+      newPassword: "A nova senha deve ter no mínimo 6 caracteres",
+      confirmPassword: "Confirme a nova senha",
+      confirmMismatch: "A confirmação da senha não confere",
+    },
+  },
+  en: {
+    back: "Back to login",
+    title: "Forgot password?",
+    subtitle: "Set a new password using your corporate email.",
+    emailLabel: "Email",
+    emailPlaceholder: "your@email.com",
+    newPasswordLabel: "New password",
+    newPasswordPlaceholder: "New password",
+    confirmPasswordLabel: "Confirm new password",
+    confirmPasswordPlaceholder: "Repeat the new password",
+    rulesTitle: "Current rules:",
+    rules: [
+      "Email must exist",
+      "New password must be at least 6 characters",
+      "Confirmation must match the new password",
+    ],
+    submit: "Update password",
+    submitting: "Updating password...",
+    successTitle: "Password updated",
+    successRedirect: "Redirecting to login in",
+    toastSuccess: "Password updated successfully",
+    toastError: "Could not update password",
+    validation: {
+      email: "Enter a valid email",
+      newPassword: "New password must be at least 6 characters",
+      confirmPassword: "Confirm the new password",
+      confirmMismatch: "Password confirmation does not match",
+    },
+  },
+  es: {
+    back: "Volver al login",
+    title: "¿Olvidaste tu contraseña?",
+    subtitle: "Define una nueva contraseña usando tu e-mail corporativo.",
+    emailLabel: "E-mail",
+    emailPlaceholder: "tu@email.com",
+    newPasswordLabel: "Nueva contraseña",
+    newPasswordPlaceholder: "Nueva contraseña",
+    confirmPasswordLabel: "Confirmar nueva contraseña",
+    confirmPasswordPlaceholder: "Repite la nueva contraseña",
+    rulesTitle: "Reglas actuales:",
+    rules: [
+      "El e-mail debe existir",
+      "La nueva contraseña debe tener al menos 6 caracteres",
+      "La confirmación debe coincidir con la nueva contraseña",
+    ],
+    submit: "Actualizar contraseña",
+    submitting: "Actualizando contraseña...",
+    successTitle: "Contraseña actualizada",
+    successRedirect: "Redirigiendo al login en",
+    toastSuccess: "Contraseña actualizada con éxito",
+    toastError: "No fue posible actualizar la contraseña",
+    validation: {
+      email: "Ingresa un e-mail válido",
+      newPassword: "La nueva contraseña debe tener al menos 6 caracteres",
+      confirmPassword: "Confirma la nueva contraseña",
+      confirmMismatch: "La confirmación de la contraseña no coincide",
+    },
+  },
+} as const;
 
 export default function ForgotPassword() {
-  const [showOldPassword, setShowOldPassword] = useState(false);
+  const { language } = useLanguage();
+  const t = CONTENT[language];
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(2);
 
+  const forgotPasswordSchema = useMemo(
+    () =>
+      z
+        .object({
+          email: z.string().email(t.validation.email),
+          newPassword: z.string().min(6, t.validation.newPassword),
+          confirmPassword: z.string().min(6, t.validation.confirmPassword),
+        })
+        .refine((data) => data.newPassword === data.confirmPassword, {
+          message: t.validation.confirmMismatch,
+          path: ["confirmPassword"],
+        }),
+    [t]
+  );
+
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
-      oldPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
@@ -52,12 +141,12 @@ export default function ForgotPassword() {
 
   const recoverPasswordMutation = trpc.emailAuth.recoverPassword.useMutation({
     onSuccess: () => {
-      toast.success("Senha atualizada com sucesso");
+      toast.success(t.toastSuccess);
       setIsSuccess(true);
       setRedirectCountdown(2);
     },
     onError: (error) => {
-      toast.error(error.message || "Não foi possível atualizar a senha");
+      toast.error(error.message || t.toastError);
     },
   });
 
@@ -89,7 +178,6 @@ export default function ForgotPassword() {
   function onSubmit(data: ForgotPasswordFormValues) {
     recoverPasswordMutation.mutate({
       email: data.email,
-      oldPassword: data.oldPassword,
       newPassword: data.newPassword,
     });
   }
@@ -108,16 +196,16 @@ export default function ForgotPassword() {
           onClick={() => window.location.assign("/login")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para login
+          {t.back}
         </Button>
 
         <div className="mb-6">
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
             <KeyRound className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Esqueceu a senha?</h1>
+          <h1 className="text-2xl font-bold text-white">{t.title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Como ainda não existe reset por e-mail, esta página atualiza sua senha usando e-mail e senha antiga.
+            {t.subtitle}
           </p>
         </div>
 
@@ -139,9 +227,9 @@ export default function ForgotPassword() {
               >
                 <CheckCircle2 className="h-8 w-8" />
               </m.div>
-              <h2 className="text-xl font-semibold text-white">Senha alterada</h2>
+              <h2 className="text-xl font-semibold text-white">{t.successTitle}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Redirecionando para o login em {redirectCountdown}s.
+                {t.successRedirect} {redirectCountdown}s.
               </p>
               <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
                 <m.div
@@ -168,11 +256,11 @@ export default function ForgotPassword() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">E-mail</FormLabel>
+                          <FormLabel className="text-white">{t.emailLabel}</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input {...field} type="email" placeholder="seu@email.com" className="pl-10 text-white" />
+                              <Input {...field} type="email" placeholder={t.emailPlaceholder} className="pl-10 text-white" />
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -184,16 +272,16 @@ export default function ForgotPassword() {
                   <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08, duration: 0.22 }}>
                     <FormField
                       control={form.control}
-                      name="oldPassword"
+                      name="newPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Senha antiga</FormLabel>
+                          <FormLabel className="text-white">{t.newPasswordLabel}</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input {...field} type={showOldPassword ? "text" : "password"} placeholder="Senha antiga" className="pl-10 pr-10 text-white" />
-                              <button type="button" onClick={() => setShowOldPassword((value) => !value)} className="absolute right-3 top-3 text-muted-foreground hover:text-white">
-                                {showOldPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                              <Input {...field} type={showNewPassword ? "text" : "password"} placeholder={t.newPasswordPlaceholder} className="pl-10 pr-10 text-white" />
+                              <button type="button" onClick={() => setShowNewPassword((value) => !value)} className="absolute right-3 top-3 text-muted-foreground hover:text-white">
+                                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                               </button>
                             </div>
                           </FormControl>
@@ -206,36 +294,14 @@ export default function ForgotPassword() {
                   <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.22 }}>
                     <FormField
                       control={form.control}
-                      name="newPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Nova senha</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input {...field} type={showNewPassword ? "text" : "password"} placeholder="Nova senha" className="pl-10 pr-10 text-white" />
-                              <button type="button" onClick={() => setShowNewPassword((value) => !value)} className="absolute right-3 top-3 text-muted-foreground hover:text-white">
-                                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </m.div>
-
-                  <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.22 }}>
-                    <FormField
-                      control={form.control}
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Confirmar nova senha</FormLabel>
+                          <FormLabel className="text-white">{t.confirmPasswordLabel}</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                              <Input {...field} type={showConfirmPassword ? "text" : "password"} placeholder="Repita a nova senha" className="pl-10 pr-10 text-white" />
+                              <Input {...field} type={showConfirmPassword ? "text" : "password"} placeholder={t.confirmPasswordPlaceholder} className="pl-10 pr-10 text-white" />
                               <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute right-3 top-3 text-muted-foreground hover:text-white">
                                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                               </button>
@@ -250,20 +316,19 @@ export default function ForgotPassword() {
                   <m.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.22 }}
+                    transition={{ delay: 0.16, duration: 0.22 }}
                     className="rounded-2xl border border-white/10 bg-white/5 p-3 text-xs text-muted-foreground"
                   >
-                    Regras atuais:
-                    <div>E-mail deve existir</div>
-                    <div>Senha antiga deve estar correta</div>
-                    <div>Nova senha deve ter no mínimo 6 caracteres</div>
-                    <div>Nova senha deve ser diferente da antiga</div>
+                    {t.rulesTitle}
+                    {t.rules.map((rule) => (
+                      <div key={rule}>{rule}</div>
+                    ))}
                   </m.div>
 
                   <m.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.24, duration: 0.22 }}
+                    transition={{ delay: 0.2, duration: 0.22 }}
                     className="space-y-3"
                   >
                     {recoverPasswordMutation.isPending && (
@@ -281,10 +346,10 @@ export default function ForgotPassword() {
                       {recoverPasswordMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Atualizando senha...
+                          {t.submitting}
                         </>
                       ) : (
-                        "Atualizar senha"
+                        t.submit
                       )}
                     </Button>
                   </m.div>

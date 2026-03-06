@@ -50,6 +50,14 @@ const parseBootstrapDemoUsers = (value: string | undefined) =>
     });
 
 const bootstrapTestClientName = process.env.BOOTSTRAP_TEST_CLIENT_NAME?.trim() || "Conta de Teste GLX";
+const defaultDevelopmentDemoUsers = [
+  {
+    email: "cliente@glx.local",
+    password: "Cliente123!",
+    plan: "essencial" as const,
+    name: "Cliente Local GLX",
+  },
+];
 
 if (isProduction && !jwtSecret) {
   throw new Error("[ENV] Missing JWT_SECRET in production. Set JWT_SECRET before starting the server.");
@@ -75,5 +83,9 @@ export const ENV = {
   bootstrapTestClientEmails: parseEmailList(process.env.BOOTSTRAP_TEST_CLIENT_EMAILS),
   bootstrapTestClientPassword: process.env.BOOTSTRAP_TEST_CLIENT_PASSWORD ?? "",
   bootstrapTestClientName,
-  bootstrapDemoUsers: parseBootstrapDemoUsers(process.env.BOOTSTRAP_DEMO_USERS),
+  bootstrapDemoUsers: (() => {
+    const parsed = parseBootstrapDemoUsers(process.env.BOOTSTRAP_DEMO_USERS);
+    if (parsed.length > 0) return parsed;
+    return isDevelopment ? defaultDevelopmentDemoUsers : [];
+  })(),
 };

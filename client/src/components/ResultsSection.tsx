@@ -70,7 +70,7 @@ export default function ResultsSection() {
               <Button
                 size="lg"
                 className="h-16 w-full bg-orange-500 px-6 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_0_30px_rgba(255,122,0,0.3)] sm:w-auto sm:px-12 sm:text-base sm:tracking-widest"
-                onClick={() => window.open("https://calendly.com/glxpartners", "_blank", "noopener,noreferrer")}
+                onClick={() => window.open("https://wa.me/5511970837585", "_blank", "noopener,noreferrer")}
               >
                 <span className="relative z-10 flex items-center gap-3">
                   {t.cta}

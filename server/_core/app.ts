@@ -110,7 +110,7 @@ function securityHeaders(_req: Request, res: Response, next: NextFunction) {
   if (process.env.NODE_ENV === "production") {
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://calendly.com; frame-ancestors 'none';"
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://wa.me; frame-ancestors 'none';"
     );
   }
 
@@ -163,13 +163,6 @@ function disablePublicAuthFlows(req: Request, res: Response, next: NextFunction)
     return;
   }
 
-  if (path === "/api/trpc/emailAuth.recoverPassword") {
-    res.status(403).json({
-      error: "Recuperação pública desativada. Faça login e altere sua senha na área autenticada.",
-    });
-    return;
-  }
-
   next();
 }
 
@@ -207,6 +200,7 @@ function registerAppRoutes(app: Express) {
   // Apply rate limiters to sensitive paths
   app.use("/api/trpc/emailAuth.login", authLimiter);
   app.use("/api/trpc/emailAuth.register", authLimiter);
+  app.use("/api/trpc/emailAuth.recoverPassword", authLimiter);
   app.use("/api/contact", contactLimiter);
   app.use("/api/trpc", apiLimiter);
 

@@ -102,7 +102,7 @@ const HERO_COPY = {
   },
 } as const satisfies Record<string, HeroCopy>;
 
-const CALENDLY_URL = "https://calendly.com/glxpartners";
+const CALENDLY_URL = "https://wa.me/5511970837585";
 
 function openCalendly() {
   window.open(CALENDLY_URL, "_blank", "noopener,noreferrer");

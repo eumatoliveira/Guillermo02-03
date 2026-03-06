@@ -210,7 +210,7 @@ export default function Navbar() {
           </Link>
 
           <Button
-            onClick={() => window.open("https://calendly.com/glxpartners", "_blank", "noopener,noreferrer")}
+            onClick={() => window.open("https://wa.me/5511970837585", "_blank", "noopener,noreferrer")}
             className="hidden xl:flex neon-btn-solid bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-wider px-5 text-xs whitespace-nowrap"
           >
             <AnimatedNavLabel text={t.nav.schedule} splitType="words" />
@@ -266,7 +266,7 @@ export default function Navbar() {
               <DropdownMenuItem
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  window.open("https://calendly.com/glxpartners", "_blank", "noopener,noreferrer");
+                  window.open("https://wa.me/5511970837585", "_blank", "noopener,noreferrer");
                 }}
                 className="hover:bg-primary/20 cursor-pointer py-3 text-primary font-bold"
               >

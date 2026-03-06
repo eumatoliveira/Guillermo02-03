@@ -8,7 +8,7 @@ export const es: Translations = {
     plans: "Nuestros Planes",
     cases: "Casos",
     membersArea: "ÁREA DE MIEMBROS",
-    schedule: "AGENDAR SPRINT DIAGNÓSTICA",
+    schedule: "Agenda una Sprint Diagnóstica",
   },
 
   // Hero Section
@@ -20,7 +20,7 @@ export const es: Translations = {
     subtitle: "Transformamos tu operación en",
     subtitleHighlight: "Lucro Líquido Predecible",
     description: "Dashboards + Rutina de Gestión + Procesos + Automatizaciones + IA + Capacitación + Metas. Todo integrado en un único sistema.",
-    cta: "AGENDAR SPRINT DIAGNÓSTICA",
+    cta: "Agenda una Sprint Diagnóstica",
     secondary: "VER NUESTROS CASOS",
   },
 
@@ -180,10 +180,10 @@ export const es: Translations = {
     password: "Contraseña",
     remember: "Recordarme",
     forgot: "¿Olvidaste tu contraseña?",
-    submit: "Acceder a la Plataforma",
+    submit: "Acceder al Dashboard",
     loading: "Ingresando...",
     notClient: "¿Aún no eres cliente?",
-    schedule: "Agenda un diagnóstico",
+    schedule: "Agenda una Sprint Diagnóstica",
     plans: "Conoce nuestros planes",
     back: "Volver al Inicio",
     backShort: "Volver",

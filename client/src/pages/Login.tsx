@@ -6,15 +6,19 @@ import { m } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Lock, User, Eye, EyeOff, Loader2, Globe, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { GlowPulse } from "@/animation/components/GlowPulse";
-import { TypingText } from "@/animation/components/TypingText";
-import { ScrollWordHighlight } from "@/animation/components/ScrollWordHighlight";
 import { useMotionCapabilities } from "@/animation/hooks/useMotionCapabilities";
 import { useParallaxScene } from "@/animation/hooks/useParallaxScene";
 import { hoverLift, tapPress } from "@/animation/config/motionPresets";
@@ -23,7 +27,6 @@ import {
   shouldEnableGlowPulse,
   shouldEnableHoverMotion,
   shouldEnableParallax,
-  shouldEnableTypingText,
 } from "@/animation/utils/perfGuards";
 
 type LoginFormValues = {
@@ -38,6 +41,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<"email" | "password" | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [backgroundFallback, setBackgroundFallback] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const { user, isAuthenticated, loading } = useAuth();
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -82,9 +87,9 @@ export default function Login() {
   const content = {
     pt: {
       brand: "GLX Partners",
-      title: "Acesso Exclusivo para",
-      titleHighlight: "Parceiros.",
-      subtitle: "Acesse seus dashboards, relatórios de performance e materiais exclusivos da metodologia GLX.",
+      panelTitle: "Área exclusiva para Parceiros.",
+      panelBody1: "Acesse o GLX Control Tower: dashboards executivos e dados integrados da sua operação.",
+      panelBody2: "Governança em tempo real para decisões rápidas, previsíveis e orientadas a margem.",
       back: "Voltar para Home",
       backMobile: "Voltar",
       email: "E-mail Corporativo",
@@ -93,11 +98,11 @@ export default function Login() {
       passwordPlaceholder: "••••••••",
       remember: "Lembrar-me",
       forgot: "Esqueceu a senha?",
-      submit: "Acessar Plataforma",
+      submit: "Acessar o Dashboard",
       submitting: "Entrando...",
       redirecting: "Redirecionando...",
       notClient: "Ainda não é cliente?",
-      schedule: "Agende um diagnóstico",
+      schedule: "Agenda uma Sprint Diagnóstica",
       plans: "Conheça nossos planos",
       validation: {
         email: "E-mail inválido",
@@ -106,9 +111,9 @@ export default function Login() {
     },
     en: {
       brand: "GLX Partners",
-      title: "Exclusive Access for",
-      titleHighlight: "Partners.",
-      subtitle: "Access your dashboards, performance reports, and exclusive GLX methodology materials.",
+      panelTitle: "Exclusive Partner Portal.",
+      panelBody1: "Access the GLX Control Tower: executive dashboards and integrated operational data.",
+      panelBody2: "Real-time governance for faster, predictable, margin-led decisions.",
       back: "Back to Home",
       backMobile: "Back",
       email: "Corporate Email",
@@ -117,11 +122,11 @@ export default function Login() {
       passwordPlaceholder: "••••••••",
       remember: "Remember me",
       forgot: "Forgot password?",
-      submit: "Access Platform",
+      submit: "Access Dashboard",
       submitting: "Logging in...",
       redirecting: "Redirecting...",
       notClient: "Not a client yet?",
-      schedule: "Schedule a diagnosis",
+      schedule: "Book a Call",
       plans: "See our plans",
       validation: {
         email: "Invalid email",
@@ -130,9 +135,9 @@ export default function Login() {
     },
     es: {
       brand: "GLX Partners",
-      title: "Acceso Exclusivo para",
-      titleHighlight: "Socios.",
-      subtitle: "Accede a tus dashboards, informes de rendimiento y materiales exclusivos de la metodología GLX.",
+      panelTitle: "Portal exclusivo para Socios.",
+      panelBody1: "Accede al GLX Control Tower: dashboards ejecutivos y datos integrados de tu operación.",
+      panelBody2: "Gobernanza en tiempo real para decisiones más rápidas, previsibles y orientadas al margen.",
       back: "Volver al Inicio",
       backMobile: "Volver",
       email: "E-mail Corporativo",
@@ -141,11 +146,11 @@ export default function Login() {
       passwordPlaceholder: "••••••••",
       remember: "Recordarme",
       forgot: "¿Olvidaste la contraseña?",
-      submit: "Acceder a la Plataforma",
+      submit: "Acceder al Dashboard",
       submitting: "Entrando...",
       redirecting: "Redirigiendo...",
       notClient: "¿Aún no eres cliente?",
-      schedule: "Agenda un diagnóstico",
+      schedule: "Agenda una Sprint Diagnóstica",
       plans: "Conoce nuestros planes",
       validation: {
         email: "E-mail inválido",
@@ -172,18 +177,18 @@ export default function Login() {
   const emailInput = form.watch("email") ?? "";
   const passwordInput = form.watch("password") ?? "";
   const hasInputActivity = emailInput.trim().length > 0 || passwordInput.length > 0;
-  const typingProgressRaw = Math.min(1, (emailInput.trim().length / 24) * 0.55 + (passwordInput.length / 12) * 0.45);
+  const typingProgressRaw = Math.min(1, (emailInput.trim().length / 16) * 0.55 + (passwordInput.length / 8) * 0.45);
   const typingProgress = prefersReducedMotion ? (hasInputActivity ? 1 : 0) : typingProgressRaw;
-  const videoRevealProgress = hasInputActivity ? typingProgress : 0;
-  const videoLayerOpacity = videoFailed ? 0 : videoRevealProgress;
-  const videoBlurPx = Math.max(0, 16 - videoRevealProgress * 16);
-  const videoFilter = `brightness(${(0.35 + videoRevealProgress * 0.85).toFixed(2)}) saturate(${(0.45 + videoRevealProgress * 0.75).toFixed(2)}) contrast(${(0.8 + videoRevealProgress * 0.35).toFixed(2)}) blur(${videoBlurPx.toFixed(1)}px)`;
-  const imageFilter = `brightness(${(0.3 + (1 - videoRevealProgress) * 0.12).toFixed(2)}) saturate(0.55) contrast(0.9) blur(${(2 + (1 - videoRevealProgress) * 2).toFixed(1)}px)`;
-  const blackOverlayOpacity = Math.max(0.06, 0.72 - videoRevealProgress * 0.62);
-  const gradientOverlayOpacity = Math.max(0.14, 0.82 - videoRevealProgress * 0.68);
+  const revealProgress = hasInputActivity ? typingProgress : 0;
+  const panelMediaFilter = `brightness(${(0.14 + revealProgress * 0.86).toFixed(2)}) saturate(${(0.62 + revealProgress * 0.5).toFixed(2)}) contrast(${(0.8 + revealProgress * 0.32).toFixed(2)}) blur(${(2 - revealProgress * 2).toFixed(1)}px)`;
+  const blackOverlayOpacity = Math.max(0.08, 0.86 - revealProgress * 0.7);
+  const gradientOverlayOpacity = Math.max(0.12, 0.78 - revealProgress * 0.54);
   const mediaTransitionClass = prefersReducedMotion
     ? "transition-none"
-    : "transition-[opacity,filter,transform] duration-700 ease-out";
+    : "transition-[opacity,filter,transform] duration-140 ease-out";
+  const primaryBackgroundImage = "/images/strategy-meeting.jpg";
+  const fallbackBackgroundImage = "/ImagemInicial.png";
+  const resolvedBackgroundImage = backgroundFallback ? fallbackBackgroundImage : primaryBackgroundImage;
   const parallaxEnabled = shouldEnableParallax(capabilities);
   const { xSoft, ySoft } = useParallaxScene({
     target: leftPanelRef,
@@ -193,7 +198,6 @@ export default function Login() {
   });
   const hoverEnabled = shouldEnableHoverMotion(capabilities);
   const glowEnabled = shouldEnableGlowPulse(capabilities);
-  const typingEnabled = shouldEnableTypingText(capabilities);
   const ctaHover = hoverEnabled ? hoverLift(capabilities.motionLevel) : undefined;
   const ctaTap = tapPress(capabilities.motionLevel);
 
@@ -254,35 +258,40 @@ export default function Login() {
       {/* Lado Esquerdo - Imagem/Branding (Desktop) */}
       <div ref={leftPanelRef} className="hidden lg:flex w-1/2 bg-black relative overflow-hidden items-center justify-center">
         <m.div className="absolute inset-0 pointer-events-none" style={{ x: xSoft, y: ySoft }}>
-          <img
-            src="/ImagemInicial.png"
-            alt="GLX Partners Office"
-            className={cn("w-full h-full object-cover", mediaTransitionClass)}
-            style={{
-              filter: imageFilter,
-              transform: `scale(${1.03 - videoRevealProgress * 0.02})`,
-            }}
-          />
-
           {!videoFailed ? (
             <video
               className={cn("absolute inset-0 w-full h-full object-cover", mediaTransitionClass)}
               style={{
-                opacity: videoLayerOpacity,
-                filter: videoFilter,
-                transform: `scale(${1 + videoRevealProgress * 0.04})`,
+                filter: panelMediaFilter,
+                transform: `scale(${1.06 - revealProgress * 0.06})`,
               }}
               autoPlay
               muted
               loop
               playsInline
-              preload="metadata"
-              poster="/ImagemInicial.png"
+              preload="auto"
+              onCanPlay={() => setVideoReady(true)}
+              onLoadedMetadata={(event) => {
+                event.currentTarget.playbackRate = 1.2;
+              }}
               onError={() => setVideoFailed(true)}
             >
-              <source src="/videos/login-typing-background.mp4" type="video/mp4" />
+              <source src="/videos/login-business-loop.webm" type="video/webm" />
+              <source src="/videos/login-business-loop.mp4" type="video/mp4" />
             </video>
           ) : null}
+          <img
+            src={resolvedBackgroundImage}
+            alt="Executivos em reunião estratégica"
+            onError={() => {
+              if (!backgroundFallback) setBackgroundFallback(true);
+            }}
+            className={cn("w-full h-full object-cover", mediaTransitionClass, videoReady && !videoFailed ? "opacity-0" : "opacity-100")}
+            style={{
+              filter: panelMediaFilter,
+              transform: `scale(${1.05 - revealProgress * 0.05})`,
+            }}
+          />
         </m.div>
         <div className="absolute inset-0 bg-black transition-opacity duration-500" style={{ opacity: blackOverlayOpacity }} />
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent transition-opacity duration-500" style={{ opacity: gradientOverlayOpacity }} />
@@ -298,24 +307,12 @@ export default function Login() {
             <img src="/images/logo-transparent.png" alt="GLX Partners" className="h-32 mb-8 object-contain" />
             <p className="text-white/90 text-lg font-semibold mb-2">{t.brand}</p>
             <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
-              {typingEnabled ? (
-                <>
-                  <TypingText text={t.title} stepMs={22} className="text-white" />
-                  {" "}
-                  <TypingText text={t.titleHighlight} stepMs={22} startDelayMs={160} className="text-primary" />
-                </>
-              ) : (
-                <>
-                  {t.title} <span className="text-primary">{t.titleHighlight}</span>
-                </>
-              )}
+              {t.panelTitle}
             </h1>
-            <ScrollWordHighlight
-              text={t.subtitle}
-              className="text-lg"
-              wordClassName="text-zinc-600"
-              activeWordClassName="text-zinc-500"
-            />
+            <div className="space-y-3 text-lg text-zinc-500">
+              <p>{t.panelBody1}</p>
+              <p>{t.panelBody2}</p>
+            </div>
           </m.div>
         </div>
       </div>
@@ -329,37 +326,46 @@ export default function Login() {
         </div>
         <Button 
           variant="ghost" 
-          className="absolute top-4 left-4 md:top-8 md:left-8 z-20 rounded-xl border border-orange-400/35 bg-black/80 text-white shadow-[0_0_0_1px_rgba(249,115,22,0.14),0_0_18px_rgba(249,115,22,0.18)] backdrop-blur-sm transition-all duration-200 hover:border-orange-300/60 hover:bg-black/90 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,146,60,0.24),0_0_28px_rgba(249,115,22,0.35)] focus-visible:ring-2 focus-visible:ring-orange-300/40"
+          size="sm"
+          className="absolute top-4 left-4 md:top-8 md:left-8 z-20 rounded-xl border border-orange-400/35 bg-black/80 px-2.5 md:px-3 text-xs md:text-sm text-white shadow-[0_0_0_1px_rgba(249,115,22,0.14),0_0_18px_rgba(249,115,22,0.18)] backdrop-blur-sm transition-all duration-200 hover:border-orange-300/60 hover:bg-black/90 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,146,60,0.24),0_0_28px_rgba(249,115,22,0.35)] focus-visible:ring-2 focus-visible:ring-orange-300/40"
           onClick={() => window.location.href = "/"}
         >
-          <ArrowLeft className="mr-2 h-4 w-4 text-orange-200" /> <span className="hidden md:inline">{t.back}</span><span className="md:hidden">{t.backMobile}</span>
+          <ArrowLeft className="mr-1.5 h-3.5 w-3.5 text-orange-200" /> <span className="hidden md:inline">{t.back}</span><span className="md:hidden">{t.backMobile}</span>
         </Button>
 
         <div className="absolute top-4 right-4 md:top-8 md:right-8 z-20">
-          <div className="inline-flex items-center rounded-xl border border-orange-400/25 bg-black/80 p-1 shadow-[0_0_0_1px_rgba(249,115,22,0.10),0_0_16px_rgba(249,115,22,0.12)] backdrop-blur-sm">
-            {([
-              { code: "pt", label: "Português" },
-              { code: "es", label: "Español" },
-              { code: "en", label: "English" },
-            ] as const).map((option) => (
-              <button
-                key={option.code}
-                type="button"
-                onClick={() => setLanguage(option.code)}
-                className={cn(
-                  "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all md:px-3 md:text-sm",
-                  language === option.code
-                    ? "bg-[#e67e22] text-white shadow-[0_0_18px_rgba(230,126,34,0.35)]"
-                    : "text-slate-300 hover:bg-white/10 hover:text-white",
-                )}
-                aria-pressed={language === option.code}
-                title={option.label}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl border border-orange-400/35 bg-black/80 text-white shadow-[0_0_0_1px_rgba(249,115,22,0.10),0_0_16px_rgba(249,115,22,0.12)] backdrop-blur-sm transition-all duration-200 hover:border-orange-300/60 hover:bg-black/90 hover:text-white hover:shadow-[0_0_0_1px_rgba(251,146,60,0.24),0_0_28px_rgba(249,115,22,0.35)] focus-visible:ring-2 focus-visible:ring-orange-300/40"
+                title="Selecionar idioma"
               >
-                <span className="hidden sm:inline">{option.label}</span>
-                <span className="sm:hidden uppercase">{option.code}</span>
-              </button>
-            ))}
-          </div>
+                <Globe className="h-5 w-5 text-orange-200" />
+                <span className="sr-only">Selecionar idioma</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="z-[140] mt-2 min-w-[11rem] border border-orange-400/25 bg-black/95 text-white backdrop-blur-sm"
+            >
+              {([
+                { code: "pt", label: "Português" },
+                { code: "es", label: "Español" },
+                { code: "en", label: "English" },
+              ] as const).map((option) => (
+                <DropdownMenuItem
+                  key={option.code}
+                  onClick={() => setLanguage(option.code)}
+                  className="cursor-pointer hover:bg-white/10 focus:bg-white/10 flex items-center justify-between"
+                >
+                  <span>{option.label}</span>
+                  {language === option.code ? <Check className="h-4 w-4 text-primary" /> : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="w-full max-w-md space-y-8">
@@ -494,7 +500,8 @@ export default function Login() {
 
           <div className="text-center text-sm text-muted-foreground mt-8 space-y-2">
             <p>
-              {t.notClient} <a href="http://www.calendly.com/glxpartners" target="_blank" rel="noopener noreferrer" className="text-white hover:underline font-medium">{t.schedule}</a>
+              {t.notClient}
+              <a href="https://wa.me/5511970837585" target="_blank" rel="noopener noreferrer" className="ml-1 text-white hover:underline font-medium">{t.schedule}</a>
             </p>
             <p>
               <a href="/planos" className="text-primary hover:underline font-medium">{t.plans}</a>
@@ -505,5 +512,3 @@ export default function Login() {
     </div>
   );
 }
-
-

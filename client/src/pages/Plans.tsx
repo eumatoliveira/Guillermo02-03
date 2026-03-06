@@ -135,7 +135,7 @@ const CONTROL_TOWER_PLANS: ControlTowerPlan[] = [
 ];
 
 function openCalendly() {
-  window.open("https://www.calendly.com/glxpartners", "_blank", "noopener,noreferrer");
+  window.open("https://wa.me/5511970837585", "_blank", "noopener,noreferrer");
 }
 
 function toneClasses(tone: ControlTowerPlan["tone"], featured?: boolean) {

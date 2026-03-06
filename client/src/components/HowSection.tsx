@@ -307,7 +307,7 @@ export default function HowSection() {
                 <Button
                   size="lg"
                   className="group relative bg-orange-500 hover:bg-orange-600 text-white font-bold uppercase tracking-widest h-14 px-10 text-sm transition-all duration-300 w-full sm:w-auto overflow-hidden"
-                  onClick={() => window.open("http://www.calendly.com/glxpartners", "_blank")}
+                  onClick={() => window.open("https://wa.me/5511970837585", "_blank")}
                 >
                   <span className="relative z-10">
                     <SplitText
