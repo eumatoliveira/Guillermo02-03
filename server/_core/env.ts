@@ -3,6 +3,9 @@ import { randomBytes } from "node:crypto";
 const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = process.env.NODE_ENV === "development";
 const jwtSecret = process.env.JWT_SECRET;
+const appId = process.env.VITE_APP_ID?.trim() ?? "";
+const oauthPortalUrl = process.env.VITE_OAUTH_PORTAL_URL?.trim() ?? "";
+const oAuthServerUrl = process.env.OAUTH_SERVER_URL?.trim() ?? "";
 type BootstrapDemoPlan = "essencial" | "pro" | "enterprise";
 
 const parseEmailList = (value: string | undefined) =>
@@ -66,11 +69,15 @@ if (isProduction && !jwtSecret) {
 const developmentSecret = `dev-${randomBytes(24).toString("hex")}`;
 
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  oauthPortalUrl: process.env.VITE_OAUTH_PORTAL_URL?.trim() ?? "",
+  appId,
+  oauthPortalUrl,
   cookieSecret: jwtSecret ?? developmentSecret,
   databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+  oAuthServerUrl,
+  isOAuthConfigured:
+    appId.length > 0 &&
+    oauthPortalUrl.length > 0 &&
+    oAuthServerUrl.length > 0,
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction,
   isDevelopment,

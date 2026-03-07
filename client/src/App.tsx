@@ -19,6 +19,7 @@ const Plans = lazy(() => import("./pages/Plans"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const InternalPdfRender = lazy(() => import("./pages/InternalPdfRender"));
 
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminFinanceiro = lazy(() => import("./pages/admin/AdminFinanceiro"));
@@ -71,6 +72,7 @@ function Router() {
           <Route path="/obrigado"><ThankYou /></Route>
           <Route path="/login"><Login /></Route>
           <Route path="/esqueceu-a-senha"><ForgotPassword /></Route>
+          <Route path="/internal/pdf-render"><InternalPdfRender /></Route>
           <Route path="/dashboard"><ClientRoute><Dashboard /></ClientRoute></Route>
           <Route path="/ceo"><ClientRoute><Redirect to="/dashboard" /></ClientRoute></Route>
           <Route path="/gestor"><ClientRoute><Redirect to="/dashboard" /></ClientRoute></Route>

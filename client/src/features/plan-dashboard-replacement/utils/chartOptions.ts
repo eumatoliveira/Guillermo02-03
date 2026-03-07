@@ -3,8 +3,8 @@ export function getChartTheme(theme: 'dark' | 'light'): any {
   return {
     chart: {
       background: 'transparent',
-      fontFamily: 'Inter, sans-serif',
-      foreColor: isDark ? '#999' : '#666',
+      fontFamily: '"Plus Jakarta Sans", sans-serif',
+      foreColor: isDark ? '#cbd5e1' : '#475569',
       toolbar: { show: false },
       animations: {
         enabled: true,
@@ -24,19 +24,19 @@ export function getChartTheme(theme: 'dark' | 'light'): any {
     dataLabels: { enabled: false },
     stroke: { curve: 'smooth' as const, width: 2.5 },
     xaxis: {
-      labels: { style: { colors: isDark ? '#777' : '#9ca3af', fontSize: '11px', fontFamily: 'Inter' } },
+      labels: { style: { colors: isDark ? '#cbd5e1' : '#64748b', fontSize: '13px', fontFamily: '"Plus Jakarta Sans"' } },
       axisBorder: { show: false },
       axisTicks: { show: false },
     },
     yaxis: {
-      labels: { style: { colors: isDark ? '#777' : '#9ca3af', fontSize: '11px', fontFamily: 'Inter' } },
+      labels: { style: { colors: isDark ? '#cbd5e1' : '#64748b', fontSize: '13px', fontFamily: '"Plus Jakarta Sans"' } },
     },
     tooltip: { theme: theme },
     colors: ['#ff5a1f', '#45a29e', '#3b82f6', '#eab308', '#ef4444'],
     legend: {
-      labels: { colors: isDark ? '#999' : '#6b7280' },
-      fontSize: '11px',
-      fontFamily: 'Inter',
+      labels: { colors: isDark ? '#e2e8f0' : '#475569' },
+      fontSize: '13px',
+      fontFamily: '"Plus Jakarta Sans"',
     },
   };
 }

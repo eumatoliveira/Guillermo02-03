@@ -109,6 +109,7 @@ temp/
 # Manus platform artifacts (dev only)
 .manus/
 .manus-logs/
+.codex-logs/
 .codex-*.log
 .codex-session-*.log
 .dev-server*.log

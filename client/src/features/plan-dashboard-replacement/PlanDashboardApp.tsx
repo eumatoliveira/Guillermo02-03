@@ -12,7 +12,7 @@ import ProDashboard from './components/ProDashboard';
 import EnterpriseDashboard from './components/EnterpriseDashboard';
 import { Filters, controlTowerFactsToAppointments, defaultFilters } from './data/mockData';
 import { buildDashboardCsv, extractDashboardSections } from './utils/csvExport';
-import { exportDashboardPDF } from './utils/pdfExport';
+import { exportDashboardHealthPDF, exportDashboardPDF } from './utils/pdfExport';
 import { getDashboardExportPolicy } from './utils/exportPolicy';
 import { buildDashboardApiFilters } from './utils/filterState';
 import { translateDashboardText, useTranslation } from './i18n';
@@ -22,6 +22,17 @@ import './scoped.css';
 type Theme = 'dark' | 'light';
 type Lang = 'PT' | 'EN' | 'ES';
 type Plan = 'ESSENTIAL' | 'PRO' | 'ENTERPRISE';
+type NotificationMode = 'all' | 'critical' | 'off';
+type NotificationEntry = {
+  id: string;
+  badgeType: '' | 'danger' | 'info' | 'success';
+  badge: string;
+  title: string;
+  desc: string;
+  time: string;
+  severityScore: number;
+  auto?: boolean;
+};
 
 function toDashboardLang(language: Language): Lang {
   if (language === 'en') return 'EN';
@@ -264,6 +275,81 @@ const exportFilterLabelsByLang: Record<Lang, { period: string; channel: string; 
   },
 };
 
+function normalizeAlertText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+}
+
+function statusSeverityScore(value: string) {
+  const normalized = normalizeAlertText(value);
+  if (!normalized) return 0;
+  if (normalized.includes('P1') || normalized.includes('CRITIC')) return 3;
+  if (normalized.includes('P2') || normalized.includes('WARN') || normalized.includes('ATENC')) return 2;
+  if (normalized.includes('P3')) return 1;
+  if (normalized.includes('OK')) return 0;
+  return 0;
+}
+
+function severityPresentation(score: number) {
+  if (score >= 3) return { badgeType: 'danger' as const, badge: 'P1' };
+  if (score >= 2) return { badgeType: '' as const, badge: 'P2' };
+  return { badgeType: 'info' as const, badge: 'P3' };
+}
+
+function extractDashboardAlerts(root: HTMLElement | null) {
+  if (!root) return [] as Array<{ key: string; section: string; metric: string; value: string; target: string; status: string; score: number }>;
+
+  const rows: Array<{ key: string; section: string; metric: string; value: string; target: string; status: string; score: number }> = [];
+  root.querySelectorAll<HTMLTableRowElement>('.data-table tbody tr').forEach((row) => {
+    const cells = Array.from(row.querySelectorAll('td')).map((cell) => cell.textContent?.replace(/\s+/g, ' ').trim() ?? '');
+    if (cells.length < 4) return;
+
+    const section =
+      row.closest('.chart-card')?.querySelector('.chart-card-title')?.textContent?.replace(/\s+/g, ' ').trim() ??
+      row.closest('.pdf-export-section')?.getAttribute('data-title')?.trim() ??
+      'Dashboard';
+
+    const metric = cells.length >= 6 ? cells[1] : cells[0];
+    const value = cells.length >= 6 ? cells[2] : cells[1];
+    const target = cells.length >= 6 ? cells[3] : cells[2];
+    const status = cells.length >= 6 ? cells[cells.length - 2] : cells[cells.length - 1];
+    const score = statusSeverityScore(status);
+
+    if (!metric || score <= 0) return;
+
+    rows.push({
+      key: `${section}::${metric}`,
+      section,
+      metric,
+      value,
+      target,
+      status,
+      score,
+    });
+  });
+
+  return rows;
+}
+
+function formatNotificationTime(language: Language) {
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR';
+  return new Date().toLocaleString(locale, {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function notificationModeAllows(mode: NotificationMode, score: number) {
+  if (mode === 'off') return false;
+  if (mode === 'critical') return score >= 3;
+  return score >= 2;
+}
+
 const initialNotifications = [
   { id: '1', badgeType: 'danger', badge: 'P1', title: 'CAC acima do teto', desc: 'R$ 185 vs meta de R$ 150. Google Ads principal ofensor.', time: 'Hoje, 11:15' },
   { id: '2', badgeType: '', badge: 'P2', title: 'No-Show acima da meta', desc: 'Taxa de 12.5% meta < 10%. 3 semanas consecutivas.', time: 'Hoje, 14:30' },
@@ -271,7 +357,7 @@ const initialNotifications = [
   { id: '4', badgeType: 'success', badge: '✓', title: 'Meta de ocupação atingida', desc: '78% acima da meta de 75%.', time: 'Ontem, 09:00' },
 ];
 
-const NotificationItem = memo(({ item, isRemoved, onToggleRemove }: { item: typeof initialNotifications[0], isRemoved: boolean, onToggleRemove: (id: string, remove: boolean) => void }) => {
+const NotificationItem = memo(({ item, isRemoved, onToggleRemove }: { item: NotificationEntry, isRemoved: boolean, onToggleRemove: (id: string, remove: boolean) => void }) => {
   if (isRemoved) {
     return (
       <div className="notif-item deleted" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 8 }}>
@@ -303,7 +389,7 @@ const NotificationItem = memo(({ item, isRemoved, onToggleRemove }: { item: type
   );
 });
 
-const NotificationPanel = memo(({ onClose, removedNotifs, onToggleRemove }: { onClose: () => void, removedNotifs: Set<string>, onToggleRemove: (id: string, remove: boolean) => void }) => (
+const NotificationPanel = memo(({ notifications, onClose, removedNotifs, onToggleRemove }: { notifications: NotificationEntry[], onClose: () => void, removedNotifs: Set<string>, onToggleRemove: (id: string, remove: boolean) => void }) => (
   <div className="overlay-backdrop" onClick={onClose}>
     <div className="overlay-panel" onClick={e => e.stopPropagation()} style={{ width: 380 }}>
       <div className="overlay-header">
@@ -311,7 +397,7 @@ const NotificationPanel = memo(({ onClose, removedNotifs, onToggleRemove }: { on
         <button className="overlay-close" onClick={onClose}>×</button>
       </div>
       <div className="overlay-body">
-        {initialNotifications.map(n => <NotificationItem key={n.id} item={n} isRemoved={removedNotifs.has(n.id)} onToggleRemove={onToggleRemove} />)}
+        {notifications.length > 0 ? notifications.map(n => <NotificationItem key={n.id} item={n} isRemoved={removedNotifs.has(n.id)} onToggleRemove={onToggleRemove} />) : <div className="notif-item"><strong>Sem notificaÃ§Ãµes novas.</strong></div>}
       </div>
     </div>
   </div>
@@ -388,6 +474,20 @@ const KpiExplainPanel = memo(({ meta, onClose }: { meta: KpiMeta; onClose: () =>
   </div>
 ));
 
+const SettingsPanelWithNotifications = memo(({ onClose, theme, setTheme, lang, setLang, notificationMode, setNotificationMode }: { onClose: () => void; theme: Theme; setTheme: (t: Theme) => void; lang: Lang; setLang: (l: Lang) => void; notificationMode: NotificationMode; setNotificationMode: (mode: NotificationMode) => void }) => (
+  <div className="overlay-backdrop" onClick={onClose}>
+    <div className="overlay-panel" onClick={e => e.stopPropagation()} style={{ width: 360 }}>
+      <div className="overlay-header"><h3>ConfiguraÃ§Ãµes</h3><button className="overlay-close" onClick={onClose}>Ã—</button></div>
+      <div className="overlay-body">
+        <div className="settings-group"><label>Tema</label><div className="selector-row"><button className={`selector-btn ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')}>Escuro</button><button className={`selector-btn ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')}>Claro</button></div></div>
+        <div className="settings-group"><label>Idioma</label><div className="selector-row">{(['PT', 'EN', 'ES'] as Lang[]).map(l => <button key={l} className={`selector-btn ${lang === l ? 'active' : ''}`} onClick={() => setLang(l)}>{l}</button>)}</div></div>
+        <div className="settings-group"><label>Refresh automÃ¡tico</label><select className="filter-select" style={{ width: '100%' }}><option>Desligado</option><option>30 segundos</option><option>1 minuto</option><option>5 minutos</option></select></div>
+        <div className="settings-group"><label>NotificaÃ§Ãµes</label><select className="filter-select" style={{ width: '100%' }} value={notificationMode} onChange={(event) => setNotificationMode(event.target.value as NotificationMode)}><option value="all">Ativadas</option><option value="critical">Apenas crÃ­ticas</option><option value="off">Desativadas</option></select></div>
+      </div>
+    </div>
+  </div>
+));
+
 function PlanDashboardApp() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
@@ -408,7 +508,13 @@ function PlanDashboardApp() {
   const [activeMenuItem, setActiveMenuItem] = useState(0);
   const [theme, setTheme] = useState<Theme>('dark');
   const [lang, setLang] = useState<Lang>(() => toDashboardLang(language));
+  const [notificationMode, setNotificationMode] = useState<NotificationMode>(() => {
+    if (typeof window === 'undefined') return 'all';
+    const stored = window.localStorage.getItem('glx-dashboard-notification-mode');
+    return stored === 'critical' || stored === 'off' || stored === 'all' ? stored : 'all';
+  });
   const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [removedNotifs, setRemovedNotifs] = useState<Set<string>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
@@ -420,6 +526,8 @@ function PlanDashboardApp() {
   const [selectedKpiMeta, setSelectedKpiMeta] = useState<KpiMeta | null>(null);
   const contentRef = useRef<HTMLElement>(null);
   const exportContentRef = useRef<HTMLDivElement>(null);
+  const previousAlertsRef = useRef<Map<string, number>>(new Map());
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const handleToggleNotif = useCallback((id: string, remove: boolean) => {
     setRemovedNotifs(prev => {
@@ -430,7 +538,43 @@ function PlanDashboardApp() {
     });
   }, []);
 
-  const activeNotifCount = initialNotifications.length - removedNotifs.size;
+  const playAlertTone = useCallback(async (score: number) => {
+    if (typeof window === 'undefined' || typeof AudioContext === 'undefined') return;
+
+    const context = audioContextRef.current ?? new AudioContext();
+    audioContextRef.current = context;
+
+    try {
+      if (context.state === 'suspended') {
+        await context.resume();
+      }
+
+      const now = context.currentTime;
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = score >= 3 ? 'sawtooth' : 'square';
+      oscillator.frequency.setValueAtTime(score >= 3 ? 880 : 660, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (score >= 3 ? 0.35 : 0.22));
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(now);
+      oscillator.stop(now + (score >= 3 ? 0.38 : 0.24));
+    } catch (error) {
+      console.warn('Alert audio unavailable:', error);
+    }
+  }, []);
+
+  const visibleNotifications = useMemo(
+    () => notifications.filter((item) => notificationModeAllows(notificationMode, item.severityScore)),
+    [notificationMode, notifications],
+  );
+  const activeNotifCount = visibleNotifications.filter((item) => !removedNotifs.has(item.id)).length;
+  const hasUnreadCriticalNotification = visibleNotifications.some((item) => !removedNotifs.has(item.id) && item.severityScore >= 3);
+  const hasUnreadWarningNotification = visibleNotifications.some((item) => !removedNotifs.has(item.id) && item.severityScore >= 2);
 
   const t = useMemo(() => i18n[lang], [lang]);
   const menu = sidebarMenus[activePlan];
@@ -468,6 +612,11 @@ function PlanDashboardApp() {
   }, [language]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('glx-dashboard-notification-mode', notificationMode);
+  }, [notificationMode]);
+
+  useEffect(() => {
     setActivePlan(prev => (prev === userPlan ? prev : userPlan));
     setActiveMenuItem(0);
     setFilters(defaultFilters);
@@ -498,6 +647,49 @@ function PlanDashboardApp() {
     translateRenderedDashboard(contentRef.current, language);
     translateRenderedDashboard(exportContentRef.current, language);
   }, [language, activeMenuItem, activePlan, dashboardQuery.data, resolvedAppointments, filters, pdfExportMode, selectedKpiMeta, showHelp, showNotifications, showSettings]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const alerts = extractDashboardAlerts(contentRef.current);
+      if (alerts.length === 0) return;
+
+      const nextSnapshot = new Map<string, number>();
+      alerts.forEach((alert) => nextSnapshot.set(alert.key, alert.score));
+
+      if (previousAlertsRef.current.size === 0) {
+        previousAlertsRef.current = nextSnapshot;
+        return;
+      }
+
+      const regressions = alerts.filter((alert) => notificationModeAllows(notificationMode, alert.score) && alert.score > (previousAlertsRef.current.get(alert.key) ?? 0));
+      previousAlertsRef.current = nextSnapshot;
+
+      if (regressions.length === 0 || notificationMode === 'off') return;
+
+      const createdAt = formatNotificationTime(language);
+      const generated = regressions
+        .slice(0, 4)
+        .map((alert) => {
+          const presentation = severityPresentation(alert.score);
+          return {
+            id: `${alert.key}-${alert.score}-${Date.now()}`,
+            badgeType: presentation.badgeType,
+            badge: presentation.badge,
+            title: `${translateText('Alerta')} ${translateDashboardText(alert.metric, language)}`,
+            desc: `${translateDashboardText(alert.section, language)}: ${translateText('valor')} ${alert.value} | ${translateText('meta')} ${alert.target} | ${translateText('status')} ${alert.status}`,
+            time: createdAt,
+            severityScore: alert.score,
+            auto: true,
+          } satisfies NotificationEntry;
+        });
+
+      setNotifications((prev) => [...generated, ...prev].slice(0, 20));
+      setToastMsg(generated[0]?.title ?? translateText('Novo alerta no dashboard'));
+      void playAlertTone(Math.max(...generated.map((item) => item.severityScore)));
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [activeMenuItem, activePlan, dashboardQuery.data, filters, language, notificationMode, playAlertTone, refreshKey, resolvedAppointments, showNotifications, translateText]);
 
   const handleSetLang = useCallback((next: Lang) => {
     setLang(next);
@@ -578,11 +770,84 @@ function PlanDashboardApp() {
     setTimeout(async () => {
       try {
         const exportNode =
-          mode === "investor"
-            ? contentRef.current
-            : exportContentRef.current;
+          mode === "executive"
+            ? exportContentRef.current ?? contentRef.current
+            : contentRef.current;
 
         if (!exportNode) throw new Error("Export ref missing");
+
+        const dateSuffix = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+        const executiveFilePrefix = `glx_${activePlan.toLowerCase()}_${lang.toLowerCase()}_${currency.toLowerCase()}_executive`;
+
+        if (mode === "executive") {
+          const response = await fetch("/api/export/pdf", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              clinicName: profileName,
+              plan: activePlan.toLowerCase(),
+              language: lang,
+              currency,
+              filters,
+              appointments: resolvedAppointments,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = `${executiveFilePrefix}_visual_${dateSuffix}.pdf`;
+          document.body.appendChild(anchor);
+          anchor.click();
+          window.setTimeout(() => {
+            URL.revokeObjectURL(url);
+            anchor.remove();
+          }, 1000);
+
+          await exportDashboardPDF(
+            exportNode,
+            t[titleKey],
+            t[subtitleKey],
+            executiveFilePrefix,
+            pdfLabelsByLang[lang],
+            exportLocaleByLang[lang],
+          );
+
+          await exportDashboardHealthPDF(
+            exportNode,
+            `${t[titleKey]} - ${translateText('Health Summary')}`,
+            translateText('Graficos, resumo de saude e metodologia de medicao'),
+            `${executiveFilePrefix}_graficos`,
+            {
+              ...pdfLabelsByLang[lang],
+              statusSummary: translateText('Resumo de saude'),
+              healthy: translateText('Saudavel'),
+              stable: translateText('Estavel'),
+              critical: translateText('Critico'),
+              legend: translateText('Legenda'),
+              legendHealthy: translateText('Saudavel: indicador dentro da meta ou com status OK.'),
+              legendStable: translateText('Estavel: indicador em atencao, warning, P2 ou P3, sem ruptura imediata.'),
+              legendCritical: translateText('Critico: indicador com status P1 ou critico, exigindo acao imediata.'),
+              methodology: translateText('Metodologia e calculos'),
+              formula: translateText('Formula'),
+              howMeasured: translateText('Como a medicao e feita'),
+              sources: translateText('Fontes e campos usados'),
+              chartGallery: translateText('Graficos executivos'),
+              snapshot: translateText('Snapshot consolidado'),
+            },
+            exportLocaleByLang[lang],
+            kpiSourceMode,
+          );
+
+          setToastMsg(translateText('PDF visual, PDF executivo e PDF de graficos gerados com sucesso!'));
+          return;
+        }
 
         const pdfTitle = mode === "investor" ? `${t[titleKey]} - ${translateText('Investor View')}` : t[titleKey];
         const pdfSubtitle = mode === "investor"
@@ -590,7 +855,7 @@ function PlanDashboardApp() {
           : t[subtitleKey];
         const filePrefix = mode === "investor"
           ? `glx_investor_${activePlan.toLowerCase()}_${lang.toLowerCase()}_${currency.toLowerCase()}`
-          : `glx_${activePlan.toLowerCase()}_${lang.toLowerCase()}_${currency.toLowerCase()}_executive`;
+          : executiveFilePrefix;
 
         await exportDashboardPDF(
           exportNode,
@@ -600,16 +865,46 @@ function PlanDashboardApp() {
           pdfLabelsByLang[lang],
           exportLocaleByLang[lang],
         );
-        setToastMsg(mode === "investor" ? translateText('PDF investidor gerado com sucesso!') : t.pdfMsg);
+
+        await exportDashboardHealthPDF(
+          exportNode,
+          `${pdfTitle} - ${translateText('Health Summary')}`,
+          translateText('Graficos, resumo de saude e metodologia de medicao'),
+          `${filePrefix}_health`,
+          {
+            ...pdfLabelsByLang[lang],
+            statusSummary: translateText('Resumo de saude'),
+            healthy: translateText('Saudavel'),
+            stable: translateText('Estavel'),
+            critical: translateText('Critico'),
+            legend: translateText('Legenda'),
+            legendHealthy: translateText('Saudavel: indicador dentro da meta ou com status OK.'),
+            legendStable: translateText('Estavel: indicador em atencao, warning, P2 ou P3, sem ruptura imediata.'),
+            legendCritical: translateText('Critico: indicador com status P1 ou critico, exigindo acao imediata.'),
+            methodology: translateText('Metodologia e calculos'),
+            formula: translateText('Formula'),
+            howMeasured: translateText('Como a medicao e feita'),
+            sources: translateText('Fontes e campos usados'),
+            chartGallery: translateText('Graficos executivos'),
+            snapshot: translateText('Snapshot consolidado'),
+          },
+          exportLocaleByLang[lang],
+          kpiSourceMode,
+        );
+
+        setToastMsg(
+          mode === "investor"
+            ? translateText('PDF investidor gerado com sucesso!')
+            : translateText('Dois PDFs gerados com sucesso!'),
+        );
       } catch (err) {
         console.error('PDF export error:', err);
-        setToastMsg(translateText('Erro na engine de PDF. Abrindo impressao...'));
-        setTimeout(() => window.print(), 500);
+        setToastMsg(translateText('Erro na engine de PDF.'));
       } finally {
         setPdfExportMode(null);
       }
     }, mode === "investor" ? 150 : 500);
-  }, [activePlan, currency, lang, pdfLoading, t, titleKey, subtitleKey, translateText]);
+  }, [activePlan, currency, filters, kpiSourceMode, lang, pdfLoading, profileName, resolvedAppointments, t, titleKey, subtitleKey, translateText]);
 
   const openKpiMeta = useCallback((label: string | null | undefined) => {
     if (!label) return;
@@ -648,8 +943,8 @@ function PlanDashboardApp() {
         <span className="ambient-orb ambient-orb-c" />
       </div>
       {mobileSidebarOpen && <button type="button" className="sidebar-backdrop" aria-label={translateText('Fechar menu')} onClick={() => setMobileSidebarOpen(false)} />}
-      {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} removedNotifs={removedNotifs} onToggleRemove={handleToggleNotif} />}
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} theme={theme} setTheme={setTheme} lang={lang} setLang={handleSetLang} />}
+      {showNotifications && <NotificationPanel notifications={visibleNotifications} onClose={() => setShowNotifications(false)} removedNotifs={removedNotifs} onToggleRemove={handleToggleNotif} />}
+      {showSettings && <SettingsPanelWithNotifications onClose={() => setShowSettings(false)} theme={theme} setTheme={setTheme} lang={lang} setLang={handleSetLang} notificationMode={notificationMode} setNotificationMode={setNotificationMode} />}
       {showHelp && <HelpPanel onClose={() => setShowHelp(false)} />}
       {translatedKpiMeta && <KpiExplainPanel meta={translatedKpiMeta} onClose={() => setSelectedKpiMeta(null)} />}
       {toastMsg && <Toast message={toastMsg} onDone={() => setToastMsg('')} />}
@@ -732,7 +1027,7 @@ function PlanDashboardApp() {
               </span>
             </div>
             <button className="topbar-btn live status-btn">{t.dadosVivo}</button>
-            <button className="topbar-btn topbar-icon-btn notification-btn" onClick={() => setShowNotifications(true)} style={{ position: 'relative' }} aria-label={translateText('Abrir notificações')}>
+            <button className={`topbar-btn topbar-icon-btn notification-btn ${hasUnreadCriticalNotification ? 'has-critical-alert' : hasUnreadWarningNotification ? 'has-warning-alert' : ''}`} onClick={() => setShowNotifications(true)} style={{ position: 'relative' }} aria-label={translateText('Abrir notificações')}>
               <Bell aria-hidden="true" />
               {activeNotifCount > 0 && <span style={{ position: 'absolute', top: -2, right: -2, width: 14, height: 14, borderRadius: '50%', background: 'var(--red)', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeNotifCount}</span>}
             </button>
@@ -749,7 +1044,7 @@ function PlanDashboardApp() {
                 disabled={!exportPolicy.csv.enabled}
                 title={exportPolicy.csv.title}
               >
-                {exportPolicy.csv.label}
+                {translateText(exportPolicy.csv.label)}
               </button>
             )}
             {exportPolicy.pdf.visible && (
@@ -760,7 +1055,7 @@ function PlanDashboardApp() {
                 disabled={pdfLoading || !exportPolicy.pdf.enabled}
                 title={exportPolicy.pdf.title}
               >
-                {pdfLoading && pdfExportMode === "executive" ? '...' : exportPolicy.pdf.label}
+                {pdfLoading && pdfExportMode === "executive" ? '...' : translateText(exportPolicy.pdf.label)}
               </button>
             )}
             {exportPolicy.investorPdf.visible && (
@@ -771,7 +1066,7 @@ function PlanDashboardApp() {
                 disabled={pdfLoading || !exportPolicy.investorPdf.enabled}
                 title={exportPolicy.investorPdf.title}
               >
-                {pdfLoading && pdfExportMode === "investor" ? '...' : exportPolicy.investorPdf.label}
+                {pdfLoading && pdfExportMode === "investor" ? '...' : translateText(exportPolicy.investorPdf.label)}
               </button>
             )}
             <button className="topbar-btn text-btn" onClick={handleLogout}>{t.sair}</button>

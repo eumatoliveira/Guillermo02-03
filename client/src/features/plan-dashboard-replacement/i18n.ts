@@ -50,6 +50,8 @@ const phraseEntries: PhraseEntry[] = [
   { source: ["Atualizar"], en: "Refresh", es: "Actualizar" },
   { source: ["Exportar CSV"], en: "Export CSV", es: "Exportar CSV" },
   { source: ["Exportar PDF"], en: "Export PDF", es: "Exportar PDF" },
+  { source: ["PDF Executivo"], en: "Executive PDF", es: "PDF Ejecutivo" },
+  { source: ["PDF Investidor"], en: "Investor PDF", es: "PDF Inversor" },
   { source: ["Sair"], en: "Logout", es: "Salir" },
   { source: ["Escuro"], en: "Dark", es: "Oscuro" },
   { source: ["Claro"], en: "Light", es: "Claro" },

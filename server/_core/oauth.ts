@@ -46,7 +46,7 @@ function readCookie(req: Request, name: string): string | undefined {
 
 export function registerOAuthRoutes(app: Express) {
   app.get("/api/oauth/start", (req: Request, res: Response) => {
-    if (!ENV.oauthPortalUrl || !ENV.appId) {
+    if (!ENV.isOAuthConfigured) {
       res.redirect(302, "/login");
       return;
     }
@@ -68,6 +68,12 @@ export function registerOAuthRoutes(app: Express) {
   });
 
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
+    if (!ENV.isOAuthConfigured) {
+      res.clearCookie(OAUTH_STATE_COOKIE, getOAuthStateCookieOptions(req));
+      res.status(503).json({ error: "oauth is not configured" });
+      return;
+    }
+
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");
     const expectedState = readCookie(req, OAUTH_STATE_COOKIE);

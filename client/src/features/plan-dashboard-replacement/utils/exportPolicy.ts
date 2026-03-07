@@ -38,14 +38,14 @@ export function getDashboardExportPolicy(plan: DashboardPlan, role: string, acti
   const planTier = toPlanTier(plan);
   const rulebook = getPlanBusinessRulebook(planTier);
   const canExportFinancial = !isRestrictedFinancialTab(plan, activeTab) || FINANCIAL_EXPORT_ROLES.has(role);
-  const executiveLabel = rulebook.exports.executivePdf.automatic ? "PDF Executivo" : "Export PDF";
+  const executiveLabel = rulebook.exports.executivePdf.automatic ? "PDF Executivo" : "Exportar PDF";
   const scheduleHint = rulebook.exports.executivePdf.scheduleHint ?? "sob demanda";
 
   const basePolicy: DashboardExportPolicy = {
     csv: {
       visible: true,
       enabled: canExportFinancial,
-      label: "Export CSV",
+      label: "Exportar CSV",
       title:
         canExportFinancial
           ? "Exportar planilha simples com os campos e dados da aba atual."

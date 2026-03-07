@@ -30,18 +30,30 @@ const GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserI
 
 class OAuthService {
   constructor(private client: ReturnType<typeof axios.create>) {
-    console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl);
-    if (!ENV.oAuthServerUrl) {
-      console.error(
-        "[OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable."
-      );
+    if (ENV.isOAuthConfigured) {
+      console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl);
+      return;
     }
+
+    console.log(
+      "[OAuth] Disabled. Set VITE_APP_ID, VITE_OAUTH_PORTAL_URL, and OAUTH_SERVER_URL to enable OAuth login."
+    );
+  }
+
+  private ensureConfigured() {
+    if (ENV.isOAuthConfigured) {
+      return;
+    }
+
+    throw new Error("OAuth is not configured for this environment.");
   }
 
   async getTokenByCode(
     code: string,
     redirectUri: string
   ): Promise<ExchangeTokenResponse> {
+    this.ensureConfigured();
+
     const payload: ExchangeTokenRequest = {
       clientId: ENV.appId,
       grantType: "authorization_code",
@@ -60,6 +72,8 @@ class OAuthService {
   async getUserInfoByToken(
     token: ExchangeTokenResponse
   ): Promise<GetUserInfoResponse> {
+    this.ensureConfigured();
+
     const { data } = await this.client.post<GetUserInfoResponse>(
       GET_USER_INFO_PATH,
       {
@@ -84,6 +98,14 @@ class SDKServer {
   constructor(client: AxiosInstance = createOAuthHttpClient()) {
     this.client = client;
     this.oauthService = new OAuthService(this.client);
+  }
+
+  private ensureOAuthConfigured() {
+    if (ENV.isOAuthConfigured) {
+      return;
+    }
+
+    throw new Error("OAuth is not configured for this environment.");
   }
 
   private deriveLoginMethod(
@@ -117,6 +139,7 @@ class SDKServer {
     code: string,
     redirectUri: string
   ): Promise<ExchangeTokenResponse> {
+    this.ensureOAuthConfigured();
     return this.oauthService.getTokenByCode(code, redirectUri);
   }
 
@@ -126,6 +149,7 @@ class SDKServer {
    * const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
    */
   async getUserInfo(accessToken: string): Promise<GetUserInfoResponse> {
+    this.ensureOAuthConfigured();
     const data = await this.oauthService.getUserInfoByToken({
       accessToken,
     } as ExchangeTokenResponse);
@@ -230,6 +254,8 @@ class SDKServer {
   async getUserInfoWithJwt(
     jwtToken: string
   ): Promise<GetUserInfoWithJwtResponse> {
+    this.ensureOAuthConfigured();
+
     const payload: GetUserInfoWithJwtRequest = {
       jwtToken,
       projectId: ENV.appId,

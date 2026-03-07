@@ -36,6 +36,7 @@ type LoginFormValues = {
 
 export default function Login() {
   const { language, setLanguage } = useLanguage();
+  const utils = trpc.useUtils();
   const capabilities = useMotionCapabilities();
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -60,21 +61,35 @@ export default function Login() {
   }, []);
 
   const loginMutation = trpc.emailAuth.login.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log("[Login] Login successful:", data);
       toast.success("Login realizado com sucesso!");
       setLoginSuccess(true);
       setIsRedirecting(true);
-      
-      // Armazenar a role para o redirecionamento
-      const targetUrl = data.user.role === "admin" ? "/admin" : "/dashboard";
-      console.log("[Login] Target URL:", targetUrl);
-      
-      // Usar setTimeout para garantir que o cookie foi setado
-      setTimeout(() => {
-        console.log("[Login] Executing redirect to:", targetUrl);
+
+      try {
+        // `auth.me` may still be cached as `null` from the pre-login screen.
+        // Refresh it now so protected routes don't bounce back to /login.
+        const authenticatedUser = await utils.auth.me.fetch();
+        if (authenticatedUser) {
+          utils.auth.me.setData(undefined, authenticatedUser);
+        }
+
+        const targetUrl =
+          (authenticatedUser?.role ?? data.user.role) === "admin"
+            ? "/admin"
+            : "/dashboard";
+        console.log("[Login] Target URL:", targetUrl);
         window.location.replace(targetUrl);
-      }, 500);
+        return;
+      } catch (error) {
+        console.warn("[Login] Failed to refresh auth.me after login:", error);
+      }
+
+      const fallbackTargetUrl = data.user.role === "admin" ? "/admin" : "/dashboard";
+      await utils.auth.me.invalidate();
+      console.log("[Login] Executing fallback redirect to:", fallbackTargetUrl);
+      window.location.replace(fallbackTargetUrl);
     },
     onError: (error) => {
       console.error("[Login] Login error:", error);

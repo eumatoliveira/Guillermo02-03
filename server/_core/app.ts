@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import { registerKommoWebhookRouter } from "../infrastructure/webhooks/kommoRouter";
 import { registerAsaasWebhookRouter } from "../infrastructure/webhooks/asaasRouter";
 import { currencyService } from "../domain/currencyService";
+import { exportRouter } from "../exportRouter";
 
 // ═══════════════════════════════════════════════════════════════
 // Port Discovery
@@ -210,6 +211,7 @@ function registerAppRoutes(app: Express) {
   registerOAuthRoutes(app);
   registerKommoWebhookRouter(app);
   registerAsaasWebhookRouter(app);
+  app.use("/api/export", exportRouter);
 
   app.use(
     "/api/trpc",
