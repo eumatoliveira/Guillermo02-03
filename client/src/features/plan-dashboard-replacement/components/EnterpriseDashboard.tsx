@@ -3,6 +3,7 @@ import ReactApexChart from 'react-apexcharts';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { getChartTheme } from '../utils/chartOptions';
 import FilterBar from './FilterBar';
+import IntegrationSection from './IntegrationSection';
 import {
   type Appointment, Filters, getAllAppointments, applyFilters, computeKPIs,
   computeByProfessional, computeByChannel, computeByProcedure, computeByUnit,
@@ -17,9 +18,25 @@ interface Props {
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   appointments?: Appointment[];
+  integrationHealth?: {
+    integrations?: Array<{
+      key: string;
+      label: string;
+      provider: string;
+      status: 'connected' | 'degraded' | 'disconnected';
+      lastSyncAt: string | null;
+      slaMinutes: number;
+      failures24h: number;
+    }>;
+    technical?: {
+      lastSyncAt?: string | null;
+      apiFailures24h?: number;
+      volumeRegistrosDia?: number;
+    };
+  } | null;
 }
 
-function EnterpriseDashboard({ activeTab, theme, visualScale, filters, onFiltersChange, lang = "PT", appointments }: Props) {
+function EnterpriseDashboard({ activeTab, theme, visualScale, filters, onFiltersChange, lang = "PT", appointments, integrationHealth }: Props) {
   const { currency, convertMoneyValue, formatCompactMoney, formatMoney, moneyTitle } = useCurrency();
   const fmt = useCallback((value: number) => formatCompactMoney(value), [formatCompactMoney]);
   const ct = useMemo(() => getChartTheme(theme, visualScale), [theme, visualScale]);
@@ -205,10 +222,11 @@ function EnterpriseDashboard({ activeTab, theme, visualScale, filters, onFilters
   const profClick = useMemo(() => ({ chart: { events: { dataPointSelection: (_e: any, _c: any, cfg: any) => drillProf(cfg.dataPointIndex) } } }), [drillProf]);
   const channelClick = useMemo(() => ({ chart: { events: { dataPointSelection: (_e: any, _c: any, cfg: any) => drillChannel(cfg.dataPointIndex) } } }), [drillChannel]);
   const procClick = useMemo(() => ({ chart: { events: { dataPointSelection: (_e: any, _c: any, cfg: any) => drillProc(cfg.dataPointIndex) } } }), [drillProc]);
+  const showFilterBar = activeTab !== 5;
 
   return (
     <div className="animate-fade-in" key={activeTab}>
-      <FilterBar filters={filters} onChange={onFiltersChange} showUnit={true} options={filterOptions} />
+      {showFilterBar ? <FilterBar filters={filters} onChange={onFiltersChange} showUnit={true} options={filterOptions} /> : null}
 
       {/* ===== TAB 0: VISÃO CEO ENTERPRISE ===== */}
       {activeTab === 0 && (<>
@@ -366,7 +384,16 @@ function EnterpriseDashboard({ activeTab, theme, visualScale, filters, onFilters
         </div>
       </>)}
       {/* ===== TAB 6: INTEGRAÇÕES ===== */}
-      {activeTab === 5 && (<>
+      {activeTab === 5 && (
+        <IntegrationSection
+          plan="ENTERPRISE"
+          totalRecords={kpis.total}
+          leads={kpis.leads}
+          realized={kpis.realized}
+          integrationHealth={integrationHealth}
+        />
+      )}
+      {activeTab === -1 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Integrações (Enterprise)</h2></div>
         <div className="overview-row">
           <div className="overview-card"><div className="overview-card-label">Fontes Conectadas</div><div className="overview-card-value">8</div><div className="overview-card-info"><div className="dot" style={{background:'var(--green)'}}/><span>Ativas</span></div></div>

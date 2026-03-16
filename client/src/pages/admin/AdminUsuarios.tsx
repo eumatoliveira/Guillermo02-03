@@ -198,6 +198,10 @@ const createInitialNewUser = () => ({
 });
 
 export default function AdminUsuarios() {
+  const surfaceCardClass = "rounded-[28px] border border-[#e6edf7] bg-white shadow-[0_18px_45px_rgba(148,163,184,0.12)]";
+  const compactStatCardClass = `${surfaceCardClass} overflow-hidden`;
+  const tableCardClass = `${surfaceCardClass} overflow-hidden`;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [planFilter, setPlanFilter] = useState("all");
@@ -378,21 +382,21 @@ export default function AdminUsuarios() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Controle de Acessos</h1>
-            <p className="text-muted-foreground">Gestão de usuários, planos e segurança (RBAC)</p>
+            <h1 className="text-[2.1rem] font-bold tracking-[-0.03em] text-[#0f172a]">Controle de Acessos</h1>
+            <p className="mt-1 text-[1.05rem] text-[#64748b]">Gestão de usuários, planos e segurança (RBAC)</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetchUsers()}>
+            <Button variant="outline" className="h-11 rounded-2xl border-[#d7e1ef] bg-white px-5 text-[#334155] shadow-sm" onClick={() => refetchUsers()}>
               <RefreshCw className={`h-4 w-4 mr-2 ${usersLoading ? 'animate-spin' : ''}`} />
               Atualizar
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" className="h-11 rounded-2xl border-[#d7e1ef] bg-white px-5 text-[#334155] shadow-sm">
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
             <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="h-11 rounded-2xl px-5 shadow-[0_16px_32px_rgba(249,115,22,0.22)]">
                   <Plus className="h-4 w-4 mr-2" />
                   Novo Usuário
                 </Button>
@@ -577,78 +581,78 @@ export default function AdminUsuarios() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total de Usuários</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <Card className={compactStatCardClass}>
+            <CardHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-3">
+              <CardTitle className="text-sm font-semibold text-[#94a3b8]">Total de Usuários</CardTitle>
+              <Users className="h-4 w-4 text-[#94a3b8]" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-6 pb-6 pt-0">
+              <div className="text-[2.2rem] font-bold tracking-[-0.03em] text-[#0f172a]">
                 {usersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : mfaStats.total}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-400">Start</CardTitle>
-              <Zap className="h-4 w-4 text-emerald-400" />
+          <Card className={compactStatCardClass}>
+            <CardHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-3">
+              <CardTitle className="text-sm font-semibold text-emerald-500">Start</CardTitle>
+              <Zap className="h-4 w-4 text-emerald-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-400">
+            <CardContent className="px-6 pb-6 pt-0">
+              <div className="text-[2.2rem] font-bold tracking-[-0.03em] text-emerald-500">
                 {usersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : mfaStats.essencial}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-amber-400">Pro</CardTitle>
-              <Crown className="h-4 w-4 text-amber-400" />
+          <Card className={compactStatCardClass}>
+            <CardHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-3">
+              <CardTitle className="text-sm font-semibold text-amber-500">Pro</CardTitle>
+              <Crown className="h-4 w-4 text-amber-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-400">
+            <CardContent className="px-6 pb-6 pt-0">
+              <div className="text-[2.2rem] font-bold tracking-[-0.03em] text-amber-500">
                 {usersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : mfaStats.pro}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-purple-400">Enterprise</CardTitle>
-              <Building2 className="h-4 w-4 text-purple-400" />
+          <Card className={compactStatCardClass}>
+            <CardHeader className="flex flex-row items-center justify-between px-6 pt-6 pb-3">
+              <CardTitle className="text-sm font-semibold text-violet-500">Enterprise</CardTitle>
+              <Building2 className="h-4 w-4 text-violet-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-400">
+            <CardContent className="px-6 pb-6 pt-0">
+              <div className="text-[2.2rem] font-bold tracking-[-0.03em] text-violet-500">
                 {usersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : mfaStats.enterprise}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader>
-            <CardTitle>Acesso por Plano no Dashboard</CardTitle>
-            <CardDescription>
+        <Card className={tableCardClass}>
+          <CardHeader className="px-6 pt-6 pb-4">
+            <CardTitle className="text-[1.65rem] font-bold tracking-[-0.03em] text-[#0f172a]">Acesso por Plano no Dashboard</CardTitle>
+            <CardDescription className="text-[0.98rem] leading-7 text-[#64748b]">
               Matriz centralizada por funcao. Alteracoes de plano aqui impactam diretamente os modulos liberados no dashboard.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 pb-6 pt-0">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Funcao</TableHead>
-                  <TableHead>Plano Minimo</TableHead>
-                  <TableHead>Start</TableHead>
-                  <TableHead>Pro</TableHead>
-                  <TableHead>Enterprise</TableHead>
+                <TableRow className="border-[#e6edf7]">
+                  <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Funcao</TableHead>
+                  <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Plano Minimo</TableHead>
+                  <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Start</TableHead>
+                  <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Pro</TableHead>
+                  <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Enterprise</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {DASHBOARD_SECTION_ORDER.map((sectionId) => (
-                  <TableRow key={sectionId}>
-                    <TableCell className="font-medium">{DASHBOARD_SECTION_LABELS[sectionId]}</TableCell>
+                  <TableRow key={sectionId} className="border-[#eef3f8]">
+                    <TableCell className="py-4 font-medium text-[#334155]">{DASHBOARD_SECTION_LABELS[sectionId]}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={planColors[MIN_PLAN_BY_SECTION[sectionId]]}>
                         {planLabels[MIN_PLAN_BY_SECTION[sectionId]]}
@@ -675,25 +679,25 @@ export default function AdminUsuarios() {
         </Card>
 
         {/* Users Table */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <Card className={tableCardClass}>
+          <CardHeader className="px-6 pt-6 pb-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <CardTitle>Usuários</CardTitle>
                 <CardDescription>Gerencie permissões, planos e acessos</CardDescription>
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94a3b8]" />
                   <Input 
                     placeholder="Buscar por nome ou email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-64"
+                    className="h-11 w-64 rounded-2xl border-[#d7e1ef] bg-[#fbfdff] pl-10"
                   />
                 </div>
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="h-11 w-32 rounded-2xl border-[#d7e1ef] bg-[#fbfdff]">
                     <SelectValue placeholder="Permissão" />
                   </SelectTrigger>
                   <SelectContent>
@@ -703,7 +707,7 @@ export default function AdminUsuarios() {
                   </SelectContent>
                 </Select>
                 <Select value={planFilter} onValueChange={setPlanFilter}>
-                  <SelectTrigger className="w-36">
+                  <SelectTrigger className="h-11 w-36 rounded-2xl border-[#d7e1ef] bg-[#fbfdff]">
                     <SelectValue placeholder="Plano" />
                   </SelectTrigger>
                   <SelectContent>
@@ -716,7 +720,7 @@ export default function AdminUsuarios() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 pb-6 pt-0">
             {usersLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -731,27 +735,27 @@ export default function AdminUsuarios() {
                   <TableRow>
                     <TableHead>Usuário</TableHead>
                     <TableHead>Permissão</TableHead>
-                    <TableHead>Plano</TableHead>
+                    <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Plano</TableHead>
                     <TableHead>API / Integrações</TableHead>
-                    <TableHead>MFA</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">MFA</TableHead>
+                    <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Status</TableHead>
                     <TableHead>Último Acesso</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className="border-[#eef3f8]">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                            <span className="text-sm font-bold text-primary">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fff1e8]">
+                            <span className="text-sm font-bold text-[#f97316]">
                               {(user.name || user.email || "?").charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium">{user.name || "Sem nome"}</p>
-                            <p className="text-sm text-muted-foreground">{user.email || "Sem email"}</p>
+                            <p className="font-medium text-[#0f172a]">{user.name || "Sem nome"}</p>
+                            <p className="text-sm text-[#94a3b8]">{user.email || "Sem email"}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -765,7 +769,7 @@ export default function AdminUsuarios() {
                           value={(user as any).plan || "essencial"} 
                           onValueChange={(v) => handleUpdatePlan(user.id, v as PlanTier)}
                         >
-                          <SelectTrigger className="w-36 h-8">
+                          <SelectTrigger className="h-9 w-36 rounded-xl border-[#d7e1ef] bg-[#fbfdff]">
                             <SelectValue>
                               <Badge variant="outline" className={planColors[(user as any).plan || "essencial"]}>
                                 {planIcons[(user as any).plan || "essencial"]}
@@ -815,7 +819,7 @@ export default function AdminUsuarios() {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Sem API</span>
+                          <span className="text-xs text-[#94a3b8]">Sem API</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -843,13 +847,13 @@ export default function AdminUsuarios() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-[#94a3b8]">
                         {formatLastAccess(user.lastSignedIn)}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="rounded-xl text-[#64748b] hover:bg-[#f8fafc]">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -907,15 +911,15 @@ export default function AdminUsuarios() {
         </Card>
 
         {/* Audit Log */}
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className={tableCardClass}>
+          <CardHeader className="px-6 pt-6 pb-4">
+            <CardTitle className="flex items-center gap-2 text-[1.65rem] font-bold tracking-[-0.03em] text-[#0f172a]">
               <History className="h-5 w-5" />
               Audit Log
             </CardTitle>
             <CardDescription>Histórico de alterações no sistema</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 pb-6 pt-0">
             {auditLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -930,16 +934,16 @@ export default function AdminUsuarios() {
                   <TableRow>
                     <TableHead>Usuário ID</TableHead>
                     <TableHead>Ação</TableHead>
-                    <TableHead>Entidade</TableHead>
-                    <TableHead>Data/Hora</TableHead>
+                    <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Entidade</TableHead>
+                    <TableHead className="h-12 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-[#94a3b8]">Data/Hora</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {auditLogs.slice(0, 10).map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="font-medium">{log.userId || "Sistema"}</TableCell>
-                      <TableCell>{log.action}</TableCell>
-                      <TableCell className="text-muted-foreground">{log.entity} {log.entityId ? `#${log.entityId}` : ""}</TableCell>
+                    <TableRow key={log.id} className="border-[#eef3f8]">
+                      <TableCell className="py-4 font-medium text-[#334155]">{log.userId || "Sistema"}</TableCell>
+                      <TableCell className="py-4 text-[#0f172a]">{log.action}</TableCell>
+                      <TableCell className="py-4 text-[#94a3b8]">{log.entity} {log.entityId ? `#${log.entityId}` : ""}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {log.createdAt ? formatDistanceToNow(new Date(log.createdAt), { addSuffix: true, locale: ptBR }) : ""}
                       </TableCell>

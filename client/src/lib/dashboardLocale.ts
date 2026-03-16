@@ -485,6 +485,26 @@ const ADMIN_COPY: Record<Language, AdminLayoutCopy> = {
           "Acoes pendentes: fila operacional para o time admin.",
         ],
       },
+      "/admin?view=pipeline": {
+        title: "Legenda - Visão 2 Pipeline & Funil",
+        description:
+          "Leitura do para-brisa comercial para garantir crescimento futuro.",
+        bullets: [
+          "Topo do funil: entrada de leads e qualidade do targeting.",
+          "Fechamento: conversao entre calls, propostas e contratos.",
+          "Visao consolidada: pipeline ponderado, ACV e setups em andamento.",
+        ],
+      },
+      "/admin?view=operacao": {
+        title: "Legenda - Visão 1 Operação Interna",
+        description:
+          "Leitura do retrovisor operacional para proteger receita, margem e capacidade.",
+        bullets: [
+          "Receita e MRR: crescimento, churn e previsibilidade.",
+          "Clientes e retencao: NPS, health score e entregas no prazo.",
+          "Financeiro e capacidade: caixa, inadimplencia e utilizacao do time.",
+        ],
+      },
       "/admin/financeiro": {
         title: "Legenda - Financeiro Admin",
         description:
@@ -604,6 +624,26 @@ const ADMIN_COPY: Record<Language, AdminLayoutCopy> = {
           "Pending actions: operational queue for admin team.",
         ],
       },
+      "/admin?view=pipeline": {
+        title: "Legend - View 2 Pipeline & Funnel",
+        description:
+          "Commercial windshield view to secure future growth.",
+        bullets: [
+          "Top of funnel: lead inflow and targeting quality.",
+          "Closing: conversion across calls, proposals and contracts.",
+          "Consolidated view: weighted pipeline, ACV and active setups.",
+        ],
+      },
+      "/admin?view=operacao": {
+        title: "Legend - View 1 Internal Operations",
+        description:
+          "Operational rear-view to protect revenue, margin and delivery capacity.",
+        bullets: [
+          "Revenue and MRR: growth, churn and predictability.",
+          "Clients and retention: NPS, health score and on-time delivery.",
+          "Finance and capacity: cash, delinquency and team utilization.",
+        ],
+      },
       "/admin/financeiro": {
         title: "Legend - Admin Financial",
         description:
@@ -721,6 +761,26 @@ const ADMIN_COPY: Record<Language, AdminLayoutCopy> = {
           "KPIs: ingreso recurrente, churn y base activa.",
           "Alertas: eventos de riesgo y accion inmediata.",
           "Acciones pendientes: cola operativa del equipo admin.",
+        ],
+      },
+      "/admin?view=pipeline": {
+        title: "Leyenda - Visión 2 Pipeline y Funnel",
+        description:
+          "Lectura del parabrisas comercial para garantizar crecimiento futuro.",
+        bullets: [
+          "Top of funnel: entrada de leads y calidad del targeting.",
+          "Cierre: conversion entre calls, propuestas y contratos.",
+          "Vista consolidada: pipeline ponderado, ACV y setups en marcha.",
+        ],
+      },
+      "/admin?view=operacao": {
+        title: "Leyenda - Visión 1 Operación Interna",
+        description:
+          "Lectura operativa para proteger ingresos, margen y capacidad de entrega.",
+        bullets: [
+          "Ingresos y MRR: crecimiento, churn y previsibilidad.",
+          "Clientes y retencion: NPS, health score y entregas a tiempo.",
+          "Finanzas y capacidad: caja, mora y uso del equipo.",
         ],
       },
       "/admin/financeiro": {

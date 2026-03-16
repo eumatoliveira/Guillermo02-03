@@ -130,6 +130,8 @@ const sidebarMenus: Record<Plan, { items: string[] }> = {
   ENTERPRISE: { items: ['Visão CEO', 'Financeiro — Investidor', 'Agenda/No-Show', 'Marketing', 'Multi-Unidade', 'Integrações', 'Operação & Experiência', 'Equipe', 'Governança'] },
 };
 
+sidebarMenus.ESSENTIAL.items.splice(4, 0, 'Integrações');
+
 const i18n: Record<Lang, Record<string, string>> = {
   PT: {
     painelEssencial: 'Painel Start', painelPro: 'Painel Pro', painelEnterprise: 'Painel Enterprise',
@@ -791,6 +793,9 @@ function PlanDashboardApp() {
   const apiFilters = useMemo(() => buildDashboardApiFilters(filters), [filters]);
   const dashboardQuery = trpc.controlTower.getDashboardData.useQuery(apiFilters, {
     refetchOnWindowFocus: false,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
     staleTime: 20_000,
   });
   const apiAppointments = useMemo(

@@ -6,7 +6,7 @@ export function getChartTheme(theme: 'dark' | 'light' | 'night', visualScale: 'n
   return {
     chart: {
       background: 'transparent',
-      fontFamily: '"Plus Jakarta Sans", sans-serif',
+      fontFamily: '"Roboto", sans-serif',
       foreColor: theme === 'night' ? '#e8decf' : isDark ? '#cbd5e1' : '#475569',
       toolbar: { show: false },
       animations: {
@@ -27,19 +27,19 @@ export function getChartTheme(theme: 'dark' | 'light' | 'night', visualScale: 'n
     dataLabels: { enabled: false },
     stroke: { curve: 'smooth' as const, width: strokeWidth },
     xaxis: {
-      labels: { style: { colors: theme === 'night' ? '#d9ccb8' : isDark ? '#cbd5e1' : '#64748b', fontSize: axisFontSize, fontFamily: '"Plus Jakarta Sans"' } },
+      labels: { style: { colors: theme === 'night' ? '#d9ccb8' : isDark ? '#cbd5e1' : '#64748b', fontSize: axisFontSize, fontFamily: '"Roboto"' } },
       axisBorder: { show: false },
       axisTicks: { show: false },
     },
     yaxis: {
-      labels: { style: { colors: theme === 'night' ? '#d9ccb8' : isDark ? '#cbd5e1' : '#64748b', fontSize: axisFontSize, fontFamily: '"Plus Jakarta Sans"' } },
+      labels: { style: { colors: theme === 'night' ? '#d9ccb8' : isDark ? '#cbd5e1' : '#64748b', fontSize: axisFontSize, fontFamily: '"Roboto"' } },
     },
     tooltip: { theme: theme },
     colors: ['#ff5a1f', '#45a29e', '#3b82f6', '#eab308', '#ef4444'],
     legend: {
       labels: { colors: theme === 'night' ? '#efe4d3' : isDark ? '#e2e8f0' : '#475569' },
       fontSize: legendFontSize,
-      fontFamily: '"Plus Jakarta Sans"',
+      fontFamily: '"Roboto"',
     },
   };
 }

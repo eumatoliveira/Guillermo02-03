@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 
 .glx-plan-dashboard-root {
   --accent: #ff6a1a;
@@ -99,7 +99,7 @@
   margin: 0;
   color: var(--text-primary);
   background: var(--bg-body);
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: calc(17px * var(--font-scale));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -1672,7 +1672,7 @@
 .glx-plan-dashboard-root .apexcharts-inner,
 .glx-plan-dashboard-root .apexcharts-graphical,
 .glx-plan-dashboard-root .apexcharts-legend {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
 .glx-plan-dashboard-root .apexcharts-text,
@@ -1958,8 +1958,950 @@
     font-size: 15px !important;
   }
 
-  .glx-plan-dashboard-root .toast {
-    min-width: 0;
-    width: calc(100vw - 24px);
+.glx-plan-dashboard-root .toast {
+  min-width: 0;
+  width: calc(100vw - 24px);
+}
+}
+
+.glx-plan-dashboard-root .integration-store-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.glx-plan-dashboard-root .integration-store-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--border-card);
+  border-radius: 30px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.12), transparent 28%),
+    linear-gradient(135deg, rgba(255, 106, 26, 0.22), rgba(110, 231, 249, 0.08) 52%, rgba(255, 255, 255, 0.02));
+}
+
+.glx-plan-dashboard-root .integration-store-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 48%, transparent 100%);
+  transform: translateX(-100%);
+  animation: integrationHeroSweep 5.4s linear infinite;
+  pointer-events: none;
+}
+
+.glx-plan-dashboard-root .integration-store-hero-copy,
+.glx-plan-dashboard-root .integration-store-hero-preview {
+  position: relative;
+  z-index: 1;
+}
+
+.glx-plan-dashboard-root .integration-hero-slide {
+  will-change: opacity, transform;
+}
+
+.glx-plan-dashboard-root .integration-hero-slide-forward {
+  animation: integrationHeroSlideForward 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glx-plan-dashboard-root .integration-hero-slide-backward {
+  animation: integrationHeroSlideBackward 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glx-plan-dashboard-root .integration-store-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+.glx-plan-dashboard-root .integration-store-hero h3 {
+  margin: 0;
+  max-width: 12ch;
+  font-size: calc(clamp(2rem, 1.65rem + 1vw, 2.9rem) * var(--font-scale));
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+}
+
+.glx-plan-dashboard-root .integration-store-hero p {
+  margin: 16px 0 0;
+  max-width: 60ch;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.glx-plan-dashboard-root .integration-store-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.glx-plan-dashboard-root .integration-installed-apps-btn {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.glx-plan-dashboard-root .integration-installed-apps-btn:hover {
+  border-color: rgba(255, 106, 26, 0.42);
+  background: rgba(255, 106, 26, 0.12);
+  color: var(--text-primary);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-installed-apps-btn {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.glx-plan-dashboard-root .integration-installed-screen {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 30px;
+  border: 1px solid var(--border-card);
+  background:
+    radial-gradient(circle at top right, rgba(255, 106, 26, 0.14), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+  box-shadow: var(--shadow-card);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-installed-screen {
+  background:
+    radial-gradient(circle at top right, rgba(255, 106, 26, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+}
+
+.glx-plan-dashboard-root .integration-installed-screen-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.glx-plan-dashboard-root .integration-installed-screen-header h3 {
+  font-size: calc(clamp(2rem, 1.65rem + 1vw, 2.5rem) * var(--font-scale));
+  line-height: 1.05;
+}
+
+.glx-plan-dashboard-root .integration-installed-screen-header p,
+.glx-plan-dashboard-root .integration-installed-empty p,
+.glx-plan-dashboard-root .integration-installed-card-meta {
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.glx-plan-dashboard-root .integration-installed-screen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.glx-plan-dashboard-root .integration-installed-card,
+.glx-plan-dashboard-root .integration-installed-empty {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 26px;
+  border: 1px solid var(--border-card);
+  background: rgba(8, 10, 16, 0.52);
+  backdrop-filter: blur(16px);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-installed-card,
+.glx-plan-dashboard-root[data-theme='light'] .integration-installed-empty {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.glx-plan-dashboard-root .integration-installed-card-meta,
+.glx-plan-dashboard-root .integration-installed-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.glx-plan-dashboard-root .integration-danger-btn {
+  border-color: rgba(248, 113, 113, 0.38);
+  background: rgba(248, 113, 113, 0.1);
+  color: #fecaca;
+}
+
+.glx-plan-dashboard-root .integration-danger-btn:hover {
+  border-color: rgba(248, 113, 113, 0.56);
+  background: rgba(248, 113, 113, 0.16);
+  color: #ffe4e6;
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-danger-btn {
+  color: #b91c1c;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+@media (max-width: 860px) {
+  .glx-plan-dashboard-root .integration-installed-screen {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .glx-plan-dashboard-root .integration-installed-screen-header {
+    flex-direction: column;
+  }
+}
+
+.glx-plan-dashboard-root .integration-preview-window,
+.glx-plan-dashboard-root .integration-store-floating-card,
+.glx-plan-dashboard-root .integration-detail-panel,
+.glx-plan-dashboard-root .integration-app-card,
+.glx-plan-dashboard-root .integration-section-card,
+.glx-plan-dashboard-root .integration-install-card {
+  border: 1px solid var(--border-card);
+  background: rgba(8, 10, 16, 0.58);
+  backdrop-filter: blur(16px);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-preview-window,
+.glx-plan-dashboard-root[data-theme='light'] .integration-store-floating-card,
+.glx-plan-dashboard-root[data-theme='light'] .integration-detail-panel,
+.glx-plan-dashboard-root[data-theme='light'] .integration-app-card,
+.glx-plan-dashboard-root[data-theme='light'] .integration-section-card,
+.glx-plan-dashboard-root[data-theme='light'] .integration-install-card {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.glx-plan-dashboard-root .integration-preview-window {
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.22);
+}
+
+.glx-plan-dashboard-root .integration-preview-image-wrap {
+  position: relative;
+  height: 260px;
+  overflow: hidden;
+}
+
+.glx-plan-dashboard-root .integration-preview-image-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 14, 20, 0.08), rgba(10, 14, 20, 0.42));
+}
+
+.glx-plan-dashboard-root .integration-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.glx-plan-dashboard-root .integration-preview-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glx-plan-dashboard-root .integration-preview-toolbar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.glx-plan-dashboard-root .integration-preview-body {
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+}
+
+.glx-plan-dashboard-root .integration-preview-icon,
+.glx-plan-dashboard-root .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
+}
+
+.glx-plan-dashboard-root .integration-preview-icon {
+  width: 82px;
+  height: 82px;
+  font-size: 22px;
+}
+
+.glx-plan-dashboard-root .integration-preview-title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.glx-plan-dashboard-root .integration-preview-subtitle {
+  color: var(--text-secondary);
+}
+
+.glx-plan-dashboard-root .integration-preview-pills,
+.glx-plan-dashboard-root .integration-detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.glx-plan-dashboard-root .integration-preview-pills span,
+.glx-plan-dashboard-root .integration-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-preview-pills span,
+.glx-plan-dashboard-root[data-theme='light'] .integration-stat-chip {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(241, 245, 249, 0.9);
+}
+
+.glx-plan-dashboard-root .integration-store-floating-card {
+  max-width: 280px;
+  margin: -34px 0 0 auto;
+  padding: 18px 20px;
+  border-radius: 24px;
+  display: grid;
+  gap: 8px;
+}
+
+.glx-plan-dashboard-root .integration-store-floating-card strong {
+  line-height: 1.45;
+}
+
+.glx-plan-dashboard-root .integration-store-floating-card span {
+  color: var(--text-muted);
+}
+
+.glx-plan-dashboard-root .integration-store-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.glx-plan-dashboard-root .integration-store-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 280px);
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 10px;
+  scroll-snap-type: x proximity;
+}
+
+.glx-plan-dashboard-root .integration-app-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  text-align: left;
+  cursor: pointer;
+  min-height: 220px;
+  align-content: start;
+  scroll-snap-align: start;
+  transition:
+    transform var(--transition-soft),
+    border-color var(--transition-soft),
+    box-shadow var(--transition-soft);
+}
+
+.glx-plan-dashboard-root .integration-app-card:hover,
+.glx-plan-dashboard-root .integration-app-card.active {
+  transform: translateY(-3px);
+  border-color: rgba(255, 106, 26, 0.36);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-app-card.active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98)),
+    radial-gradient(circle at top left, rgba(255, 106, 26, 0.14), transparent 52%);
+  box-shadow:
+    0 0 0 1px rgba(255, 106, 26, 0.18),
+    0 20px 40px rgba(255, 106, 26, 0.12);
+}
+
+.glx-plan-dashboard-root .integration-app-card-top,
+.glx-plan-dashboard-root .integration-review-header,
+.glx-plan-dashboard-root .integration-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.glx-plan-dashboard-root .integration-app-icon {
+  width: 54px;
+  height: 54px;
+  font-size: 15px;
+}
+
+.glx-plan-dashboard-root .integration-app-card-body {
+  display: grid;
+  gap: 6px;
+}
+
+.glx-plan-dashboard-root .integration-app-card-body strong,
+.glx-plan-dashboard-root .integration-detail-header h3 {
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.glx-plan-dashboard-root .integration-app-card-body span,
+.glx-plan-dashboard-root .integration-review-header span,
+.glx-plan-dashboard-root .integration-section-card-header small,
+.glx-plan-dashboard-root .integration-form-field span,
+.glx-plan-dashboard-root .integration-stat-chip span {
+  color: var(--text-muted);
+}
+
+.glx-plan-dashboard-root .integration-app-card-body p,
+.glx-plan-dashboard-root .integration-detail-header p,
+.glx-plan-dashboard-root .integration-section-card p,
+.glx-plan-dashboard-root .integration-review-card p,
+.glx-plan-dashboard-root .integration-install-card-copy p {
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.glx-plan-dashboard-root .integration-app-card-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+
+.glx-plan-dashboard-root .integration-app-card-actions .topbar-btn {
+  min-height: 38px;
+}
+
+.glx-plan-dashboard-root .integration-app-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.glx-plan-dashboard-root .integration-mini-progress,
+.glx-plan-dashboard-root .integration-install-progress-track {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-mini-progress,
+.glx-plan-dashboard-root[data-theme='light'] .integration-install-progress-track {
+  background: #e2e8f0;
+}
+
+.glx-plan-dashboard-root .integration-mini-progress-bar,
+.glx-plan-dashboard-root .integration-install-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff6a1a, #ffc36b);
+  box-shadow: 0 0 20px rgba(255, 106, 26, 0.55);
+  transition: width 220ms ease;
+}
+
+.glx-plan-dashboard-root .integration-detail-panel {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 30px;
+  box-shadow: var(--shadow-card);
+}
+
+.glx-plan-dashboard-root .integration-detail-screen {
+  display: grid;
+  gap: 18px;
+}
+
+.glx-plan-dashboard-root .integration-detail-screen-toolbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.glx-plan-dashboard-root .integration-detail-panel-full {
+  width: 100%;
+}
+
+.glx-plan-dashboard-root .integration-detail-id {
+  display: flex;
+  gap: 16px;
+}
+
+.glx-plan-dashboard-root .integration-detail-icon {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.glx-plan-dashboard-root .integration-rating-card {
+  min-width: 132px;
+  padding: 16px;
+  border-radius: 22px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-rating-card {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(241, 245, 249, 0.92);
+}
+
+.glx-plan-dashboard-root .integration-rating-card strong {
+  display: block;
+  font-size: 32px;
+}
+
+.glx-plan-dashboard-root .integration-rating-card span {
+  display: block;
+  color: #ffb547;
+  letter-spacing: 0.18em;
+}
+
+.glx-plan-dashboard-root .integration-rating-card small {
+  color: var(--text-muted);
+}
+
+.glx-plan-dashboard-root .integration-stat-chip {
+  min-width: 180px;
+  justify-content: space-between;
+}
+
+.glx-plan-dashboard-root .integration-stat-chip strong {
+  color: var(--text-primary);
+}
+
+.glx-plan-dashboard-root .integration-detail-columns,
+.glx-plan-dashboard-root .integration-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.glx-plan-dashboard-root .integration-section-card {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 26px;
+}
+
+.glx-plan-dashboard-root .integration-section-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.glx-plan-dashboard-root .integration-section-card-header span {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.glx-plan-dashboard-root .integration-bullet-list,
+.glx-plan-dashboard-root .integration-doc-list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.glx-plan-dashboard-root .integration-bullet-list li,
+.glx-plan-dashboard-root .integration-doc-list li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.glx-plan-dashboard-root .integration-bullet-list li::before,
+.glx-plan-dashboard-root .integration-doc-list li::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff6a1a, #ffd36e);
+}
+
+.glx-plan-dashboard-root .integration-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.glx-plan-dashboard-root .integration-form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.glx-plan-dashboard-root .integration-form-field .filter-select {
+  width: 100%;
+}
+
+.glx-plan-dashboard-root .integration-install-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 24px;
+  background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 26%), rgba(255, 255, 255, 0.03);
+}
+
+.glx-plan-dashboard-root .integration-install-card.is-installing {
+  box-shadow: 0 0 0 1px rgba(255, 106, 26, 0.22), 0 18px 40px rgba(255, 106, 26, 0.14);
+}
+
+.glx-plan-dashboard-root .integration-install-card.is-installed {
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.24), 0 18px 40px rgba(52, 211, 153, 0.12);
+}
+
+.glx-plan-dashboard-root .integration-install-steps,
+.glx-plan-dashboard-root .integration-install-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.glx-plan-dashboard-root .integration-install-steps span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-install-steps span {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.glx-plan-dashboard-root .integration-install-steps span.done {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #ff6a1a, #ffb347);
+}
+
+.glx-plan-dashboard-root .integration-review-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-review-card {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.glx-plan-dashboard-root .integration-review-card small {
+  color: var(--text-muted);
+}
+
+.glx-plan-dashboard-root .integration-review-form {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-review-form {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.glx-plan-dashboard-root .integration-review-form-header {
+  display: grid;
+  gap: 4px;
+}
+
+.glx-plan-dashboard-root .integration-review-form-header span,
+.glx-plan-dashboard-root .integration-review-summary {
+  color: var(--text-secondary);
+}
+
+.glx-plan-dashboard-root .integration-review-stars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.glx-plan-dashboard-root .integration-review-star {
+  appearance: none;
+  border: 1px solid var(--border-card);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform var(--transition-soft),
+    border-color var(--transition-soft),
+    color var(--transition-soft),
+    background var(--transition-soft);
+}
+
+.glx-plan-dashboard-root .integration-review-star:hover,
+.glx-plan-dashboard-root .integration-review-star.active {
+  transform: translateY(-1px);
+  color: #ffb547;
+  border-color: rgba(255, 181, 71, 0.42);
+  background: rgba(255, 181, 71, 0.12);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-review-star {
+  background: #fff;
+}
+
+.glx-plan-dashboard-root .integration-review-score {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.glx-plan-dashboard-root .integration-review-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 112px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, var(--panel-bg-soft), rgba(255, 255, 255, 0.02)),
+    var(--panel-bg-strong);
+  color: var(--text-primary);
+  font: inherit;
+  line-height: 1.6;
+  transition:
+    border-color var(--transition-soft),
+    box-shadow var(--transition-soft);
+}
+
+.glx-plan-dashboard-root .integration-review-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 106, 26, 0.28);
+  box-shadow: 0 0 0 3px rgba(255, 106, 26, 0.12);
+}
+
+.glx-plan-dashboard-root .integration-review-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.glx-plan-dashboard-root .integration-review-form-actions .topbar-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.glx-plan-dashboard-root .integration-review-header {
+  align-items: center;
+}
+
+.glx-plan-dashboard-root .integration-review-identity {
+  display: grid;
+  gap: 2px;
+}
+
+.glx-plan-dashboard-root .integration-review-rating {
+  color: #ffb547;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+.glx-plan-dashboard-root .integration-review-empty {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px dashed rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.glx-plan-dashboard-root[data-theme='light'] .integration-review-empty {
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.glx-plan-dashboard-root .integration-review-empty p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.glx-plan-dashboard-root .integration-accent-agenda .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-agenda .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-agenda {
+  background: linear-gradient(135deg, #f97316, #facc15);
+}
+
+.glx-plan-dashboard-root .integration-accent-kommo .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-kommo .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-kommo {
+  background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+}
+
+.glx-plan-dashboard-root .integration-accent-asaas .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-asaas .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-asaas {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.glx-plan-dashboard-root .integration-accent-sheets .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-sheets .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-sheets {
+  background: linear-gradient(135deg, #22c55e, #86efac);
+}
+
+.glx-plan-dashboard-root .integration-accent-financeiro .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-financeiro .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-financeiro {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+}
+
+.glx-plan-dashboard-root .integration-accent-nps .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-nps .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-nps {
+  background: linear-gradient(135deg, #ec4899, #fb7185);
+}
+
+.glx-plan-dashboard-root .integration-accent-crm-api .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-crm-api .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-crm-api {
+  background: linear-gradient(135deg, #8b5cf6, #c084fc);
+}
+
+.glx-plan-dashboard-root .integration-accent-meta-ads .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-meta-ads .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-meta-ads {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+.glx-plan-dashboard-root .integration-accent-google-ads .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-google-ads .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-google-ads {
+  background: linear-gradient(135deg, #0f766e, #06b6d4);
+}
+
+.glx-plan-dashboard-root .integration-accent-gtm .integration-preview-icon,
+.glx-plan-dashboard-root .integration-accent-gtm .integration-app-icon,
+.glx-plan-dashboard-root .integration-detail-icon.integration-accent-gtm {
+  background: linear-gradient(135deg, #334155, #64748b);
+}
+
+@keyframes integrationHeroSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes integrationHeroSlideForward {
+  0% {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes integrationHeroSlideBackward {
+  0% {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 1280px) {
+  .glx-plan-dashboard-root .integration-store-layout,
+  .glx-plan-dashboard-root .integration-store-hero,
+  .glx-plan-dashboard-root .integration-detail-columns,
+  .glx-plan-dashboard-root .integration-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .glx-plan-dashboard-root .integration-store-grid {
+    grid-auto-columns: minmax(240px, 260px);
+  }
+}
+
+@media (max-width: 860px) {
+  .glx-plan-dashboard-root .integration-store-shell {
+    gap: 16px;
+  }
+
+  .glx-plan-dashboard-root .integration-store-grid {
+    grid-auto-columns: minmax(220px, 240px);
+  }
+
+  .glx-plan-dashboard-root .integration-store-hero,
+  .glx-plan-dashboard-root .integration-detail-panel {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .glx-plan-dashboard-root .integration-detail-id {
+    flex-direction: column;
+  }
+
+  .glx-plan-dashboard-root .integration-app-card-body strong,
+  .glx-plan-dashboard-root .integration-detail-header h3 {
+    font-size: 18px;
   }
 }

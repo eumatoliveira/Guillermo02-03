@@ -3,6 +3,7 @@ import ReactApexChart from 'react-apexcharts';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { getChartTheme } from '../utils/chartOptions';
 import FilterBar from './FilterBar';
+import IntegrationSection from './IntegrationSection';
 import { useTranslation } from '../i18n';
 import {
   type Appointment, Filters, getAllAppointments, applyFilters, computeKPIs,
@@ -17,6 +18,22 @@ interface Props {
   filters: Filters;
   onFiltersChange: (f: Filters) => void;
   appointments?: Appointment[];
+  integrationHealth?: {
+    integrations?: Array<{
+      key: string;
+      label: string;
+      provider: string;
+      status: 'connected' | 'degraded' | 'disconnected';
+      lastSyncAt: string | null;
+      slaMinutes: number;
+      failures24h: number;
+    }>;
+    technical?: {
+      lastSyncAt?: string | null;
+      apiFailures24h?: number;
+      volumeRegistrosDia?: number;
+    };
+  } | null;
 }
 
 type Priority = 'P1' | 'P2' | 'P3' | 'OK';
@@ -43,7 +60,7 @@ function badgeForPriority(priority: Priority) {
   return { label: 'OK', className: 'green' };
 }
 
-function EssentialDashboard({ activeTab, theme, visualScale, filters, onFiltersChange, lang = "PT", appointments }: Props) {
+function EssentialDashboard({ activeTab, theme, visualScale, filters, onFiltersChange, lang = "PT", appointments, integrationHealth }: Props) {
   const { t } = useTranslation();
   const { formatCompactMoney, formatMoney, moneyTitle } = useCurrency();
   const fmt = useCallback((value: number) => formatCompactMoney(value), [formatCompactMoney]);
@@ -339,9 +356,11 @@ function EssentialDashboard({ activeTab, theme, visualScale, filters, onFiltersC
     chart: { events: { dataPointSelection: (_e: any, _c: any, cfg: any) => drillProfessional(cfg.dataPointIndex) } },
   }), [drillProfessional]);
 
+  const showFilterBar = activeTab !== 4;
+
   return (
     <div className="animate-fade-in" key={activeTab}>
-      <FilterBar filters={filters} onChange={onFiltersChange} options={filterOptions} />
+      {showFilterBar ? <FilterBar filters={filters} onChange={onFiltersChange} options={filterOptions} /> : null}
 
       {/* ===== VISÃO CEO ===== */}
       {activeTab === 0 && (<>
@@ -488,7 +507,16 @@ function EssentialDashboard({ activeTab, theme, visualScale, filters, onFiltersC
         </div>
       </>)}
       {/* ===== OPERAÇÃO ===== */}
-      {activeTab === 4 && (<>
+      {activeTab === 4 && (
+        <IntegrationSection
+          plan="ESSENTIAL"
+          totalRecords={kpis.total}
+          leads={kpis.leads}
+          realized={kpis.realized}
+          integrationHealth={integrationHealth}
+        />
+      )}
+      {activeTab === 5 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Operação & Experiência</h2></div>
         <div className="overview-row">
           <div className="overview-card"><div className="overview-card-label">NPS Geral</div><div className="overview-card-value" style={{color:npsGaugeValue >= 8 ? 'var(--green)' : 'var(--yellow)'}}>{npsGaugeValue}</div></div>

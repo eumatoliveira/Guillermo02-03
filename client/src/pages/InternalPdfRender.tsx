@@ -23,6 +23,8 @@ const planTabs: Record<Plan, string[]> = {
   ENTERPRISE: ["Visão CEO", "Financeiro — Investidor", "Agenda/No-Show", "Marketing", "Multi-Unidade", "Integrações", "Operação & Experiência", "Equipe", "Governança"],
 };
 
+planTabs.ESSENTIAL.splice(4, 0, "IntegraÃ§Ãµes");
+
 function toPlan(plan: Payload["plan"]): Plan {
   if (plan === "enterprise") return "ENTERPRISE";
   if (plan === "pro") return "PRO";
