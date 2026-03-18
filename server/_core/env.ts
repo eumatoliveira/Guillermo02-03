@@ -71,7 +71,7 @@ const developmentSecret = `dev-${randomBytes(24).toString("hex")}`;
 export const ENV = {
   appId,
   oauthPortalUrl,
-  cookieSecret: jwtSecret ?? developmentSecret,
+  cookieSecret: jwtSecret || developmentSecret,
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl,
   isOAuthConfigured:

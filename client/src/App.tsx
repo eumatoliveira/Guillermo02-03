@@ -33,6 +33,7 @@ const AdminContratosSheets = lazy(() => import("./pages/admin/AdminContratosShee
 const AdminDreSheets = lazy(() => import("./pages/admin/AdminDreSheets"));
 const AdminErros = lazy(() => import("./pages/admin/AdminErros"));
 const AdminFeatureFlags = lazy(() => import("./pages/admin/AdminFeatureFlags"));
+const AdminClientConfig = lazy(() => import("./pages/admin/AdminClientConfig"));
 
 const CEOScorecard = lazy(() => import("./pages/client/CEOScorecard"));
 const OperationalWaste = lazy(() => import("./pages/client/OperationalWaste"));
@@ -73,10 +74,14 @@ function AdminRouteFallback() {
 
 function Router() {
   const [location] = useLocation();
-  const suspenseFallback = location.startsWith("/admin") ? <AdminRouteFallback /> : <RouteFallback />;
+  const isAdmin = location.startsWith("/admin");
+  // Admin routes share the same layout shell — use a stable key so MotionRouteTransition
+  // never triggers a full page fade between sub-routes (that caused the white-flash + 700ms delay).
+  const transitionKey = isAdmin ? "admin" : location;
+  const suspenseFallback = isAdmin ? <AdminRouteFallback /> : <RouteFallback />;
 
   return (
-    <MotionRouteTransition routeKey={location}>
+    <MotionRouteTransition routeKey={transitionKey}>
       <Suspense fallback={suspenseFallback}>
         <Switch location={location}>
           <Route path="/"><Home /></Route>
@@ -114,6 +119,7 @@ function Router() {
           <Route path="/admin/planilha-dre"><AdminRoute><AdminDreSheets /></AdminRoute></Route>
           <Route path="/admin/erros"><AdminRoute><AdminErros /></AdminRoute></Route>
           <Route path="/admin/flags"><AdminRoute><AdminFeatureFlags /></AdminRoute></Route>
+          <Route path="/admin/client-config"><AdminRoute><AdminClientConfig /></AdminRoute></Route>
 
           <Route path="/performance"><Redirect to="/ceo" /></Route>
           <Route path="/performance/financials"><Redirect to="/financeiro" /></Route>

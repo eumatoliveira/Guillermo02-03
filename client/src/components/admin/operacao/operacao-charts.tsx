@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   Area,
   AreaChart,
@@ -42,15 +41,11 @@ type OperacaoChartsProps = {
 
 function ChartCard({ title, subtitle, children, height = 280 }: ChartCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, boxShadow: "0 24px 48px rgba(15,23,42,0.08)" }}
-      transition={{ duration: 0.35 }}
+    <div
       data-glx-chart-card="true"
       data-glx-chart-title={title}
       data-glx-chart-subtitle={subtitle ?? ""}
-      className="rounded-[28px] border border-[#e8edf5] bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]"
+      className="rounded-[28px] border border-[#e8edf5] bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)] transition-shadow duration-200 hover:shadow-[0_24px_48px_rgba(15,23,42,0.08)]"
     >
       <div className="mb-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#94a3b8]">Painel</p>
@@ -59,7 +54,7 @@ function ChartCard({ title, subtitle, children, height = 280 }: ChartCardProps) 
       </div>
 
       <div style={{ height }}>{children}</div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -192,7 +187,7 @@ export function OperacaoChartsGrid({
               <Tooltip formatter={(value: number) => [currency(value), ""]} />
               <Area
                 isAnimationActive
-                animationDuration={950}
+                animationDuration={250}
                 animationEasing="ease-out"
                 type="monotone"
                 dataKey="mrr"
@@ -201,7 +196,7 @@ export function OperacaoChartsGrid({
                 strokeWidth={3}
                 onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `Mes ${String(entry?.mes ?? "")}` })}
               />
-              <Line isAnimationActive animationDuration={1100} animationEasing="ease-out" type="monotone" dataKey="forecast" stroke="#94a3b8" strokeDasharray="5 5" dot={false} strokeWidth={2} />
+              <Line isAnimationActive animationDuration={250} animationEasing="ease-out" type="monotone" dataKey="forecast" stroke="#94a3b8" strokeDasharray="5 5" dot={false} strokeWidth={2} />
             </AreaChart>
           </ChartContainer>
         </ChartCard>
@@ -216,7 +211,7 @@ export function OperacaoChartsGrid({
               <ReferenceLine y={15} stroke="#10b981" strokeDasharray="4 4" label="Meta 15%" />
               <Line
                 isAnimationActive
-                animationDuration={1000}
+                animationDuration={250}
                 animationEasing="ease-out"
                 type="monotone"
                 dataKey="crescimento"
@@ -241,7 +236,7 @@ export function OperacaoChartsGrid({
               <Tooltip formatter={(value: number) => [currency(value), ""]} />
               <Bar
                 isAnimationActive
-                animationDuration={900}
+                animationDuration={250}
                 animationEasing="ease-out"
                 dataKey="newMRR"
                 name="New MRR"
@@ -251,8 +246,8 @@ export function OperacaoChartsGrid({
               />
               <Bar
                 isAnimationActive
-                animationDuration={1050}
-                animationBegin={90}
+                animationDuration={250}
+                
                 animationEasing="ease-out"
                 dataKey="churnMRR"
                 name="Churn MRR"
@@ -271,10 +266,10 @@ export function OperacaoChartsGrid({
               <XAxis dataKey="mes" tickLine={false} axisLine={false} />
               <YAxis tickLine={false} axisLine={false} />
               <Tooltip formatter={(value: number) => [currency(value), ""]} />
-              <Bar isAnimationActive animationDuration={850} animationEasing="ease-out" dataKey="mrr" stackId="a" fill="#0f172a" radius={[6, 6, 0, 0]} onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `Receita ${String(entry?.mes ?? "")}` })} />
-              <Bar isAnimationActive animationDuration={950} animationBegin={70} animationEasing="ease-out" dataKey="setup" stackId="a" fill="#f97316" onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `Setup ${String(entry?.mes ?? "")}` })} />
-              <Bar isAnimationActive animationDuration={1050} animationBegin={120} animationEasing="ease-out" dataKey="advisory" stackId="a" fill="#38bdf8" onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `Advisory ${String(entry?.mes ?? "")}` })} />
-              <Bar isAnimationActive animationDuration={1150} animationBegin={160} animationEasing="ease-out" dataKey="oneTime" stackId="a" fill="#cbd5e1" onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `One-time ${String(entry?.mes ?? "")}` })} />
+              <Bar isAnimationActive animationDuration={250} animationEasing="ease-out" dataKey="mrr" stackId="a" fill="#0f172a" radius={[6, 6, 0, 0]} onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `Receita ${String(entry?.mes ?? "")}` })} />
+              <Bar isAnimationActive animationDuration={250}  animationEasing="ease-out" dataKey="setup" stackId="a" fill="#f97316" onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `Setup ${String(entry?.mes ?? "")}` })} />
+              <Bar isAnimationActive animationDuration={250}  animationEasing="ease-out" dataKey="advisory" stackId="a" fill="#38bdf8" onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `Advisory ${String(entry?.mes ?? "")}` })} />
+              <Bar isAnimationActive animationDuration={250}  animationEasing="ease-out" dataKey="oneTime" stackId="a" fill="#cbd5e1" onClick={(entry) => setChartFilter({ dimension: "month", value: String(entry?.mes ?? ""), label: `One-time ${String(entry?.mes ?? "")}` })} />
             </BarChart>
           </ChartContainer>
         </ChartCard>
@@ -289,7 +284,7 @@ export function OperacaoChartsGrid({
               <ReferenceLine y={35} stroke="#10b981" strokeDasharray="4 4" label="Meta 35%" />
               <Line
                 isAnimationActive
-                animationDuration={1000}
+                animationDuration={250}
                 animationEasing="ease-out"
                 type="monotone"
                 dataKey="margem"
@@ -319,7 +314,7 @@ export function OperacaoChartsGrid({
                   background
                   dataKey="value"
                   isAnimationActive
-                  animationDuration={1100}
+                  animationDuration={250}
                   animationEasing="ease-out"
                   onClick={() => setChartFilter({ dimension: "client", value: "NPS", label: "Recorte NPS" })}
                 />
@@ -338,7 +333,7 @@ export function OperacaoChartsGrid({
                 <Tooltip formatter={(value: number) => [value, "Health Score"]} />
                 <Bar
                   isAnimationActive
-                  animationDuration={1000}
+                  animationDuration={250}
                   animationEasing="ease-out"
                   dataKey="health"
                   radius={[0, 8, 8, 0]}
@@ -366,11 +361,9 @@ export function OperacaoChartsGrid({
                 <span>{capacidadeAtual}%</span>
               </div>
               <div className="h-4 overflow-hidden rounded-full bg-[#edf2f7]">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.max(0, Math.min(capacidadeAtual, 100))}%` }}
-                  transition={{ duration: 0.9, ease: "easeOut" }}
-                  className="h-full rounded-full bg-[#0ea5e9]"
+                <div
+                  style={{ width: `${Math.max(0, Math.min(capacidadeAtual, 100))}%`, transition: "width 0.3s ease" }}
+                  className="h-full rounded-full bg-[#0ea5e9] cursor-pointer"
                   onClick={() =>
                     setChartFilter({
                       dimension: "capacityBand",
@@ -391,8 +384,8 @@ export function OperacaoChartsGrid({
                 <Tooltip formatter={(value: number, name) => [name === "sla" ? `${value.toFixed(1)}h` : `${value}%`, ""]} />
                 <Line
                   isAnimationActive
-                  animationDuration={1100}
-                  animationBegin={120}
+                  animationDuration={250}
+                  
                   animationEasing="ease-out"
                   yAxisId="right"
                   type="monotone"

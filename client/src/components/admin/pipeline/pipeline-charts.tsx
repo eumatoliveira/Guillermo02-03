@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   Area,
   AreaChart,
@@ -67,15 +66,11 @@ function ChartCard({
   height = 280,
 }: ChartCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, boxShadow: "0 24px 48px rgba(15,23,42,0.08)" }}
-      transition={{ duration: 0.35 }}
+    <div
       data-glx-chart-card="true"
       data-glx-chart-title={title}
       data-glx-chart-subtitle={subtitle ?? ""}
-      className="rounded-[28px] border border-[#e8edf5] bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]"
+      className="rounded-[28px] border border-[#e8edf5] bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)] transition-shadow duration-200 hover:shadow-[0_24px_48px_rgba(15,23,42,0.08)]"
     >
       <div className="mb-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#94a3b8]">{eyebrow}</p>
@@ -84,7 +79,7 @@ function ChartCard({
       </div>
 
       <div style={{ height }}>{children}</div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -171,7 +166,7 @@ export function PipelineChartsGrid({ view }: { view: DashboardViewDefinition }) 
               <Legend />
               <Bar
                 isAnimationActive
-                animationDuration={950}
+                animationDuration={250}
                 animationEasing="ease-out"
                 dataKey="valor"
                 name="Volume atual"
@@ -231,7 +226,7 @@ export function PipelineChartsGrid({ view }: { view: DashboardViewDefinition }) 
               <ReferenceLine y={targetMrr * 3} stroke="#10b981" strokeDasharray="4 4" label="Meta 3x" />
               <Area
                 isAnimationActive
-                animationDuration={1050}
+                animationDuration={250}
                 animationEasing="ease-out"
                 type="monotone"
                 dataKey="pipeline"
@@ -355,7 +350,7 @@ export function PipelineChartsGrid({ view }: { view: DashboardViewDefinition }) 
               <Legend />
               <Bar
                 isAnimationActive
-                animationDuration={950}
+                animationDuration={250}
                 animationEasing="ease-out"
                 dataKey="dias"
                 name="Dias"

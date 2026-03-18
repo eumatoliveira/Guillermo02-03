@@ -17,14 +17,12 @@ import {
   Settings,
   Circle,
   ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { AnimatePresence, m } from "framer-motion";
-import { useMotionCapabilities } from "@/animation/hooks/useMotionCapabilities";
-import { hoverLift, tapPress } from "@/animation/config/motionPresets";
-import { shouldEnableHoverMotion } from "@/animation/utils/perfGuards";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +62,7 @@ type NavKey =
   | "pipeline"
   | "operations"
   | "errors"
+  | "clientConfig"
   | "integrations"
   | "kommo"
   | "asaas"
@@ -82,6 +81,7 @@ type NavItem = {
 const PRIMARY_NAV_ITEMS: NavItem[] = [
   { key: "pipeline", href: "/admin?view=pipeline", icon: GitBranch },
   { key: "operations", href: "/admin?view=operacao", icon: BriefcaseBusiness },
+  { key: "clientConfig", href: "/admin/client-config", icon: SlidersHorizontal },
   { key: "errors", href: "/admin/erros", icon: AlertTriangle },
 ];
 
@@ -181,10 +181,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [integrationsOpen, setIntegrationsOpen] = useState(true);
-  const motionCaps = useMotionCapabilities();
-  const hoverEnabled = shouldEnableHoverMotion(motionCaps);
-  const sharedHover = hoverEnabled ? hoverLift(motionCaps.motionLevel) : undefined;
-  const sharedTap = tapPress(motionCaps.motionLevel);
 
   const notifications: Array<{ id: number; type: "warning" | "info" | "error"; time: string; title: string }> = [];
   const changePasswordMutation = trpc.emailAuth.changePassword.useMutation();
@@ -382,8 +378,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           ) : null}
         </AnimatePresence>
 
-        <m.aside
-          layout
+        <aside
           className={cn(
             "fixed top-0 left-0 z-50 h-full w-64 transform transition-transform duration-200 ease-in-out lg:translate-x-0",
             sidebarBg,
@@ -414,14 +409,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       : location === item.href || location.startsWith(`${item.href}/`);
                   return (
                     <li key={item.key}>
-                      <m.button
+                      <button
                         type="button"
-                        layout
-                        whileHover={sharedHover}
-                        whileTap={sharedTap}
                         onClick={() => handleNavClick(item.href)}
                         className={cn(
-                          "flex w-full items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all cursor-pointer text-left",
+                          "flex w-full items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all cursor-pointer text-left active:scale-[0.98]",
                           isActive
                             ? cn(accentColor, "text-white shadow-lg shadow-orange-500/20")
                             : cn(sidebarText, sidebarHover, theme === "dark" ? "hover:text-white" : "hover:text-[#121826]"),
@@ -429,7 +421,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       >
                         <item.icon className="h-5 w-5 flex-shrink-0" />
                         {copy.navigation[item.key]}
-                      </m.button>
+                      </button>
                     </li>
                   );
                 })}
@@ -458,14 +450,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     const isActive = location === item.href || location.startsWith(`${item.href}/`);
                     return (
                       <li key={item.key}>
-                        <m.button
+                        <button
                           type="button"
-                          layout
-                          whileHover={sharedHover}
-                          whileTap={sharedTap}
                           onClick={() => handleNavClick(item.href)}
                           className={cn(
-                            "ml-6 flex w-[calc(100%-1.5rem)] items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all cursor-pointer text-left",
+                            "ml-6 flex w-[calc(100%-1.5rem)] items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all cursor-pointer text-left active:scale-[0.98]",
                             isActive
                               ? cn(accentColor, "text-white shadow-lg shadow-orange-500/20")
                               : cn(sidebarText, sidebarHover, theme === "dark" ? "hover:text-white" : "hover:text-[#121826]"),
@@ -473,7 +462,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         >
                           <item.icon className="h-4 w-4 flex-shrink-0" />
                           {copy.navigation[item.key]}
-                        </m.button>
+                        </button>
                       </li>
                     );
                   })
@@ -521,7 +510,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             </div>
           </div>
-        </m.aside>
+        </aside>
 
         <div className="lg:pl-64">
           <header className={cn("sticky top-0 z-30 border-b backdrop-blur-xl", headerBg, borderColor)}>

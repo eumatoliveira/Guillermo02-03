@@ -56,6 +56,7 @@ type AdminLayoutCopy = {
     googleForms: string;
     contractsSheet: string;
     dreSheet: string;
+    clientConfig: string;
     errors: string;
     flags: string;
     settings: string;
@@ -471,6 +472,7 @@ const ADMIN_COPY: Record<Language, AdminLayoutCopy> = {
       googleForms: "Google Forms",
       contractsSheet: "Planilha de Contratos",
       dreSheet: "Planilha DRE",
+      clientConfig: "Config. do Cliente",
       errors: "Erros e Logs",
       flags: "Feature Flags",
       settings: "Configurações",
@@ -657,6 +659,7 @@ const ADMIN_COPY: Record<Language, AdminLayoutCopy> = {
       googleForms: "Google Forms",
       contractsSheet: "Contracts Sheet",
       dreSheet: "DRE Sheet",
+      clientConfig: "Client Config",
       errors: "Errors and Logs",
       flags: "Feature Flags",
       settings: "Settings",
@@ -843,6 +846,7 @@ const ADMIN_COPY: Record<Language, AdminLayoutCopy> = {
       googleForms: "Google Forms",
       contractsSheet: "Planilla de Contratos",
       dreSheet: "Planilla DRE",
+      clientConfig: "Config. del Cliente",
       errors: "Errores y Logs",
       flags: "Feature Flags",
       settings: "Configuraciones",

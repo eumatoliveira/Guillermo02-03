@@ -574,12 +574,11 @@ function localizeViewData(data: AdminDashboardViewData, language: "pt" | "en" | 
   };
 }
 
-function fetchView(viewId: DashboardViewId, semaforo: string, period: string, product: string, chartFilter: AdminChartFilter | null) {
-  return new Promise<AdminDashboardViewData>((resolve) => {
-    window.setTimeout(() => {
-      resolve(viewId === "pipeline" ? buildPipelineData(semaforo, period, product, chartFilter) : buildOperacaoData(semaforo, period, product, chartFilter));
-    }, 220);
-  });
+function fetchView(viewId: DashboardViewId, semaforo: string, period: string, product: string, chartFilter: AdminChartFilter | null): Promise<AdminDashboardViewData> {
+  const data = viewId === "pipeline"
+    ? buildPipelineData(semaforo, period, product, chartFilter)
+    : buildOperacaoData(semaforo, period, product, chartFilter);
+  return Promise.resolve(data);
 }
 
 export function useAdminDashboardView(viewId: DashboardViewId) {

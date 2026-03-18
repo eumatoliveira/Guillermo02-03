@@ -1,41 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 .glx-plan-dashboard-root {
-  --accent: #ff6a1a;
-  --accent-strong: #ff934f;
-  --accent-soft: rgba(255, 106, 26, 0.16);
-  --accent-faint: rgba(255, 106, 26, 0.08);
-  --cyan: #6ee7f9;
-  --cyan-soft: rgba(110, 231, 249, 0.14);
-  --green: #34d399;
-  --yellow: #fbbf24;
-  --red: #f87171;
-  --panel-radius: 28px;
-  --panel-radius-md: 22px;
-  --panel-radius-sm: 16px;
-  --transition-soft: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  --accent: #D97706;
+  --accent-strong: #F59E0B;
+  --accent-soft: rgba(217, 119, 6, 0.16);
+  --accent-faint: rgba(217, 119, 6, 0.08);
+  --cyan: #06B6D4;
+  --cyan-soft: rgba(6, 182, 212, 0.14);
+  --green: #22C55E;
+  --yellow: #EAB308;
+  --red: #EF4444;
+  --panel-radius: 12px;
+  --panel-radius-md: 12px;
+  --panel-radius-sm: 8px;
+  --transition-soft: 200ms ease;
   --font-scale: 1;
   --chart-scale: 1;
 }
 
 .glx-plan-dashboard-root[data-theme='dark'] {
-  --bg-body: #000000;
-  --bg-elevated: #050505;
-  --bg-sidebar: #000000;
-  --bg-topbar: rgba(0, 0, 0, 0.72);
-  --panel-bg: #0a0b0f;
-  --panel-bg-strong: #050505;
-  --panel-bg-soft: rgba(255, 255, 255, 0.04);
-  --panel-glow: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
-  --border-card: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --text-primary: #f8fafc;
-  --text-secondary: rgba(248, 250, 252, 0.76);
-  --text-muted: rgba(248, 250, 252, 0.48);
-  --chart-grid: rgba(255, 255, 255, 0.08);
-  --tooltip-bg: rgba(10, 12, 17, 0.96);
-  --shadow-card: 0 28px 80px rgba(0, 0, 0, 0.34);
-  --shadow-soft: 0 18px 44px rgba(0, 0, 0, 0.22);
+  --bg-body: #0D0F11;
+  --bg-elevated: #1A1D21;
+  --bg-sidebar: #0D0F11;
+  --bg-topbar: #0D0F11;
+  --panel-bg: #1A1D21;
+  --panel-bg-strong: #14171A;
+  --panel-bg-soft: rgba(255, 255, 255, 0.03);
+  --panel-glow: linear-gradient(180deg, rgba(217, 119, 6, 0.04), transparent);
+  --border-card: #2A2D31;
+  --border-strong: #3A3D42;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --tooltip-bg: rgba(26, 29, 33, 0.96);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-soft: 0 4px 16px rgba(0,0,0,0.4);
 }
 
 .glx-plan-dashboard-root[data-theme='light'] {
@@ -60,22 +60,22 @@
 
 .glx-plan-dashboard-root[data-theme='night'] {
   --bg-body: #120f0d;
-  --bg-elevated: #16110e;
-  --bg-sidebar: #140f0d;
-  --bg-topbar: rgba(20, 15, 13, 0.88);
+  --bg-elevated: #1a1410;
+  --bg-sidebar: #120f0d;
+  --bg-topbar: #120f0d;
   --panel-bg: #1a1410;
-  --panel-bg-strong: #140f0d;
-  --panel-bg-soft: rgba(255, 238, 214, 0.04);
-  --panel-glow: linear-gradient(180deg, rgba(255, 180, 120, 0.05), rgba(255, 255, 255, 0.01));
-  --border-card: rgba(255, 214, 170, 0.12);
-  --border-strong: rgba(255, 214, 170, 0.18);
+  --panel-bg-strong: #14100c;
+  --panel-bg-soft: rgba(255, 238, 214, 0.03);
+  --panel-glow: linear-gradient(180deg, rgba(217, 119, 6, 0.06), transparent);
+  --border-card: rgba(255, 214, 170, 0.14);
+  --border-strong: rgba(255, 214, 170, 0.22);
   --text-primary: #f7ead8;
-  --text-secondary: rgba(247, 234, 216, 0.78);
-  --text-muted: rgba(247, 234, 216, 0.54);
-  --chart-grid: rgba(255, 225, 190, 0.08);
+  --text-secondary: rgba(247, 234, 216, 0.72);
+  --text-muted: rgba(247, 234, 216, 0.48);
+  --chart-grid: rgba(255, 225, 190, 0.06);
   --tooltip-bg: rgba(20, 15, 13, 0.96);
-  --shadow-card: 0 28px 80px rgba(0, 0, 0, 0.42);
-  --shadow-soft: 0 18px 44px rgba(0, 0, 0, 0.28);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-soft: 0 4px 16px rgba(0,0,0,0.5);
 }
 
 .glx-plan-dashboard-root[data-visual-scale='large'] {
@@ -99,8 +99,8 @@
   margin: 0;
   color: var(--text-primary);
   background: var(--bg-body);
-  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: calc(17px * var(--font-scale));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: calc(14px * var(--font-scale));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   isolation: isolate;
@@ -111,41 +111,13 @@
   content: '';
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(circle at 14% 8%, rgba(255, 106, 26, 0.15), transparent 24%),
-    radial-gradient(circle at 88% 10%, rgba(110, 231, 249, 0.08), transparent 20%),
-    radial-gradient(circle at 50% 110%, rgba(255, 106, 26, 0.1), transparent 36%),
-    linear-gradient(180deg, #000000 0%, #030405 52%, #000000 100%);
+  background: var(--bg-body);
   pointer-events: none;
   z-index: -4;
 }
 
-.glx-plan-dashboard-root[data-theme='light']::before {
-  background:
-    radial-gradient(circle at 14% 8%, rgba(255, 106, 26, 0.08), transparent 24%),
-    radial-gradient(circle at 88% 10%, rgba(110, 231, 249, 0.04), transparent 20%),
-    linear-gradient(180deg, #f8fafc 0%, #ffffff 52%, #f8fafc 100%);
-}
-
-.glx-plan-dashboard-root[data-theme='night']::before {
-  background:
-    radial-gradient(circle at 14% 8%, rgba(255, 106, 26, 0.12), transparent 24%),
-    radial-gradient(circle at 88% 10%, rgba(255, 188, 120, 0.08), transparent 20%),
-    linear-gradient(180deg, #120f0d 0%, #17110e 52%, #120f0d 100%);
-}
-
 .glx-plan-dashboard-root::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 88px 88px;
-  mask-image: radial-gradient(circle at center, #000 24%, transparent 88%);
-  opacity: 0.18;
-  pointer-events: none;
-  z-index: -3;
+  content: none;
 }
 
 .glx-plan-dashboard-root[data-theme='light']::after {
@@ -348,52 +320,42 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 58px;
-  padding: 15px 18px;
-  margin: 0 2px;
+  min-height: 40px;
+  padding: 10px 12px;
+  margin: 0;
   border: 1px solid transparent;
-  border-radius: 18px;
+  border-radius: 8px;
   color: var(--text-secondary);
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
   cursor: pointer;
   transition:
-    transform var(--transition-soft),
     color var(--transition-soft),
-    border-color var(--transition-soft),
-    background var(--transition-soft),
-    box-shadow var(--transition-soft);
+    background var(--transition-soft);
 }
 
 .glx-plan-dashboard-root .sidebar-item:hover {
-  transform: translateX(4px);
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .glx-plan-dashboard-root .sidebar-item.active {
   color: var(--text-primary);
   font-weight: 600;
-  background:
-    linear-gradient(90deg, rgba(255, 106, 26, 0.18), rgba(255, 255, 255, 0.04)),
-    rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 106, 26, 0.16);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 16px 32px rgba(255, 106, 26, 0.1);
+  background: rgba(217, 119, 6, 0.12);
+  border-color: transparent;
 }
 
 .glx-plan-dashboard-root .sidebar-item.active::before {
   content: '';
   position: absolute;
-  left: -1px;
-  top: 50%;
-  width: 4px;
-  height: 22px;
-  border-radius: 999px;
-  transform: translateY(-50%);
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
 }
 
 .glx-plan-dashboard-root .sidebar-bottom {
@@ -785,13 +747,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 22px 28px 16px;
-  background: linear-gradient(180deg, var(--bg-topbar), rgba(8, 10, 16, 0.4));
-  backdrop-filter: blur(22px);
+  padding: 16px 24px;
+  background: var(--bg-topbar);
+  border-bottom: 1px solid var(--border-card);
 }
 
 .glx-plan-dashboard-root[data-theme='light'] .topbar {
-  background: linear-gradient(180deg, var(--bg-topbar), rgba(255, 255, 255, 0.8));
+  background: var(--bg-topbar);
 }
 
 .glx-plan-dashboard-root[data-theme='light'] .sidebar-item,
@@ -895,13 +857,7 @@
 }
 
 .glx-plan-dashboard-root .topbar::after {
-  content: '';
-  position: absolute;
-  left: 26px;
-  right: 26px;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-card), transparent);
+  content: none;
 }
 
 .glx-plan-dashboard-root .topbar-title-row {
@@ -944,19 +900,19 @@
 }
 
 .glx-plan-dashboard-root .topbar-title h1 {
-  font-size: calc(clamp(2.25rem, 1.7rem + 1.2vw, 3rem) * var(--font-scale));
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.02;
+  font-size: calc(clamp(1.75rem, 1.5rem + 0.8vw, 2.25rem) * var(--font-scale));
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
 }
 
 .glx-plan-dashboard-root .topbar-title span {
   display: block;
-  margin-top: 7px;
+  margin-top: 4px;
   color: var(--text-secondary);
-  font-size: calc(17px * var(--font-scale));
-  letter-spacing: 0.04em;
-  line-height: 1.45;
+  font-size: calc(14px * var(--font-scale));
+  letter-spacing: 0;
+  line-height: 1.4;
 }
 
 .glx-plan-dashboard-root .topbar-actions {
@@ -968,13 +924,9 @@
 }
 
 .glx-plan-dashboard-root .topbar-corner-theme {
-  position: absolute;
-  top: 16px;
-  right: 28px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  z-index: 2;
 }
 
 .glx-plan-dashboard-root .topbar-theme-btn {
@@ -1279,14 +1231,14 @@
 }
 
 .glx-plan-dashboard-root .export-pdf {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  background: #DC2626;
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 16px 28px rgba(255, 106, 26, 0.22);
+  box-shadow: none;
 }
 
 .glx-plan-dashboard-root .export-pdf:hover {
-  background: linear-gradient(135deg, #ff7a30 0%, #ffa76e 100%);
+  background: #B91C1C;
 }
 
 .glx-plan-dashboard-root .content {
@@ -1309,41 +1261,26 @@
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border-card);
-  background:
-    radial-gradient(circle at top right, rgba(255, 106, 26, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 26%),
-    var(--panel-bg);
+  background: var(--panel-bg);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(18px);
 }
 
 .glx-plan-dashboard-root .filter-bar::after,
 .glx-plan-dashboard-root .overview-card::after,
 .glx-plan-dashboard-root .chart-card::after,
 .glx-plan-dashboard-root .detail-section::after {
-  content: '';
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 106, 26, 0.7), transparent);
-  opacity: 0.55;
+  content: none;
 }
 
 .glx-plan-dashboard-root .overview-card:nth-child(3n)::before,
 .glx-plan-dashboard-root .chart-grid>.chart-card:nth-child(3n)::before,
 .glx-plan-dashboard-root .detail-section:nth-child(3n)::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at top right, rgba(110, 231, 249, 0.16), transparent 36%);
-  pointer-events: none;
+  content: none;
 }
 
 .glx-plan-dashboard-root .filter-bar {
-  padding: 20px 22px 18px;
-  border-radius: 26px;
+  padding: 16px 20px 14px;
+  border-radius: 12px;
 }
 
 .glx-plan-dashboard-root .filter-bar-title {
@@ -1351,10 +1288,10 @@
   align-items: center;
   gap: 8px;
   color: var(--text-primary);
-  font-size: calc(17px * var(--font-scale));
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  margin-bottom: 14px;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 500;
+  letter-spacing: 0;
+  margin-bottom: 12px;
 }
 
 .glx-plan-dashboard-root .filter-info-wrap {
@@ -1534,13 +1471,12 @@
 .glx-plan-dashboard-root .section-header {
   display: flex;
   align-items: center;
-  min-height: 62px;
-  padding: 16px 20px;
-  border-radius: 20px;
-  background:
-    linear-gradient(90deg, rgba(255, 106, 26, 0.12), transparent 55%),
-    rgba(255, 255, 255, 0.03);
-  box-shadow: var(--shadow-soft);
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: 0;
+  background: var(--panel-bg-strong);
+  border-left: 4px solid var(--accent);
+  box-shadow: none;
 }
 
 .glx-plan-dashboard-root .section-header h2 {
@@ -1548,17 +1484,13 @@
   align-items: center;
   gap: 12px;
   color: var(--text-primary);
-  font-size: calc(22px * var(--font-scale));
+  font-size: calc(18px * var(--font-scale));
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .glx-plan-dashboard-root .orange-bar {
-  width: 4px;
-  height: 24px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 0 18px rgba(255, 106, 26, 0.3);
+  display: none;
 }
 
 .glx-plan-dashboard-root .overview-row {
@@ -1568,12 +1500,11 @@
 }
 
 .glx-plan-dashboard-root .overview-card {
-  min-height: calc(176px * var(--chart-scale));
-  padding: 24px 24px 22px;
+  min-height: calc(100px * var(--chart-scale));
+  padding: 20px 20px 18px;
   border-radius: var(--panel-radius-md);
   cursor: pointer;
   transition:
-    transform var(--transition-soft),
     border-color var(--transition-soft),
     box-shadow var(--transition-soft);
 }
@@ -1581,27 +1512,26 @@
 .glx-plan-dashboard-root .overview-card:hover,
 .glx-plan-dashboard-root .chart-card:hover,
 .glx-plan-dashboard-root .detail-section:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(217, 119, 6, 0.35);
   box-shadow:
-    var(--shadow-card),
-    0 0 0 1px rgba(255, 255, 255, 0.03);
+    var(--shadow-soft),
+    0 0 20px rgba(217, 119, 6, 0.1);
 }
 
 .glx-plan-dashboard-root .overview-card-label {
-  color: var(--text-muted);
-  font-size: calc(14px * var(--font-scale));
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  color: var(--text-secondary);
+  font-size: calc(11px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .glx-plan-dashboard-root .overview-card-value {
-  margin-top: 14px;
+  margin-top: 8px;
   color: var(--text-primary);
-  font-size: calc(clamp(2.7rem, 2.1rem + 1vw, 3.5rem) * var(--font-scale));
+  font-size: calc(clamp(2.25rem, 1.8rem + 0.6vw, 3rem) * var(--font-scale));
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   line-height: 1;
 }
 
@@ -1719,7 +1649,7 @@
 .glx-plan-dashboard-root .chart-card {
   display: flex;
   flex-direction: column;
-  min-height: calc(430px * var(--chart-scale));
+  min-height: calc(360px * var(--chart-scale));
   border-radius: var(--panel-radius);
 }
 
@@ -1728,26 +1658,26 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 24px 26px 0;
+  padding: 20px 20px 0;
 }
 
 .glx-plan-dashboard-root .chart-card-title {
   color: var(--text-primary);
-  font-size: calc(22px * var(--font-scale));
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .glx-plan-dashboard-root .chart-card-header>span:last-child {
   flex-shrink: 0;
   color: var(--text-muted);
-  font-size: calc(15px * var(--font-scale)) !important;
+  font-size: calc(12px * var(--font-scale)) !important;
   line-height: 1.45;
 }
 
 .glx-plan-dashboard-root .chart-card-body {
   flex: 1;
-  padding: 20px 22px 22px;
+  padding: 16px 20px 20px;
 }
 
 .glx-plan-dashboard-root .chart-card-badge {

@@ -108,7 +108,7 @@ function buildIsoDateTime(dateStr: string, hour: number, minute: number) {
 function generateAppointments(): Appointment[] {
   const rng = seededRandom(42);
   const appointments: Appointment[] = [];
-  const baseDate = new Date(2026, 1, 1); // Feb 1, 2026
+  const baseDate = todayInSaoPaulo(); // always anchored to today in São Paulo (BRT)
 
   for (let day = 0; day < 90; day++) {
     const date = new Date(baseDate);
@@ -217,10 +217,14 @@ function generateAppointments(): Appointment[] {
 }
 
 let _allAppointments: Appointment[] | null = null;
+let _appointmentsCacheDate: string | null = null;
 
 export function getAllAppointments(): Appointment[] {
-  if (!_allAppointments) {
+  // Cache is invalidated when the date changes in São Paulo timezone
+  const todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+  if (!_allAppointments || _appointmentsCacheDate !== todayKey) {
     _allAppointments = generateAppointments();
+    _appointmentsCacheDate = todayKey;
   }
   return _allAppointments;
 }
@@ -419,6 +423,30 @@ export function computeByWeekday(data: Appointment[]) {
   });
 }
 
+/** Returns today's date (year/month/day) anchored to America/Sao_Paulo timezone. */
+function todayInSaoPaulo(): Date {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const y = Number(parts.find(p => p.type === 'year')!.value);
+  const m = Number(parts.find(p => p.type === 'month')!.value) - 1;
+  const d = Number(parts.find(p => p.type === 'day')!.value);
+  return new Date(y, m, d);
+}
+
+function fmtWeekDate(dateStr: string) {
+  // Use noon to avoid DST boundary issues; display in SP timezone
+  const d = new Date(dateStr + 'T12:00:00');
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  }).format(d);
+}
+
 export function computeWeeklyTrend(data: Appointment[]) {
   const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
   if (sorted.length === 0) return [];
@@ -430,7 +458,7 @@ export function computeWeeklyTrend(data: Appointment[]) {
   for (const row of sorted) {
     const daysDiff = (new Date(row.date).getTime() - new Date(weekStart).getTime()) / (1000 * 60 * 60 * 24);
     if (daysDiff >= 7) {
-      weeks.push({ label: `S${weeks.length + 1}`, data: currentWeek });
+      weeks.push({ label: fmtWeekDate(weekStart), data: currentWeek });
       currentWeek = [];
       weekStart = row.date;
     }
@@ -438,13 +466,35 @@ export function computeWeeklyTrend(data: Appointment[]) {
   }
 
   if (currentWeek.length > 0) {
-    weeks.push({ label: `S${weeks.length + 1}`, data: currentWeek });
+    weeks.push({ label: fmtWeekDate(weekStart), data: currentWeek });
   }
 
   return weeks.slice(-8).map((week) => ({
     label: week.label,
     ...computeKPIs(week.data),
   }));
+}
+
+const _monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+export function computeMonthlyTrend(data: Appointment[]) {
+  const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date));
+  if (sorted.length === 0) return [];
+
+  const monthMap = new Map<string, Appointment[]>();
+  for (const row of sorted) {
+    const key = row.date.slice(0, 7); // "YYYY-MM"
+    if (!monthMap.has(key)) monthMap.set(key, []);
+    monthMap.get(key)!.push(row);
+  }
+
+  return Array.from(monthMap.entries()).map(([key, monthData]) => {
+    const m = parseInt(key.slice(5, 7)) - 1;
+    return {
+      label: _monthNames[m] ?? key,
+      ...computeKPIs(monthData),
+    };
+  });
 }
 
 export function getFilterOptions(data: Appointment[]) {

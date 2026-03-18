@@ -446,6 +446,8 @@ function IntegrationSection({
   const [selectedAppId, setSelectedAppId] = useState(DEFAULT_CATALOG[plan][0]?.key ?? '');
   const [bannerDirection, setBannerDirection] = useState<'forward' | 'backward'>('forward');
   const [installations, setInstallations] = useState<Record<string, InstallationState>>({});
+  const [saveStatus, setSaveStatus] = useState<Record<string, 'idle' | 'saved' | 'error'>>({});
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
   const [showInstalledAppsView, setShowInstalledAppsView] = useState(false);
   const [showAppDetailView, setShowAppDetailView] = useState(false);
   const [userReviews, setUserReviews] = useState<Record<string, IntegrationReview[]>>({});
@@ -605,7 +607,27 @@ function IntegrationSection({
   const saveForm = (integrationKey: string) => {
     if (typeof window === 'undefined') return;
     const payload = forms[integrationKey] ?? buildInitialState(integrationKey);
+    const spec = FORM_SPECS[integrationKey];
+
+    // Validate required fields (any field whose placeholder looks like a URL or key)
+    const emptyFields = spec?.fields
+      .filter((f) => !payload[f.id]?.trim())
+      .map((f) => f.label) ?? [];
+
+    if (emptyFields.length > 0) {
+      setSaveErrors((prev) => ({ ...prev, [integrationKey]: `Preencha: ${emptyFields.join(', ')}` }));
+      setSaveStatus((prev) => ({ ...prev, [integrationKey]: 'error' }));
+      setTimeout(() => {
+        setSaveStatus((prev) => ({ ...prev, [integrationKey]: 'idle' }));
+        setSaveErrors((prev) => ({ ...prev, [integrationKey]: '' }));
+      }, 3000);
+      return;
+    }
+
     window.localStorage.setItem(buildStorageKey(plan, integrationKey), JSON.stringify(payload));
+    setSaveErrors((prev) => ({ ...prev, [integrationKey]: '' }));
+    setSaveStatus((prev) => ({ ...prev, [integrationKey]: 'saved' }));
+    setTimeout(() => setSaveStatus((prev) => ({ ...prev, [integrationKey]: 'idle' })), 2500);
   };
 
   const updateReviewDraft = (integrationKey: string, updates: Partial<IntegrationReviewDraft>) => {
@@ -876,10 +898,28 @@ function IntegrationSection({
                   <button type="button" className="topbar-btn export-pdf" onClick={() => installIntegration(selectedRow.key)}>
                     {selectedInstall.stage === 'installing' ? 'Instalando...' : selectedInstall.stage === 'installed' ? 'Reinstalar' : 'Instalar agora'}
                   </button>
-                  <button type="button" className="topbar-btn text-btn" onClick={() => saveForm(selectedRow.key)}>
-                    Salvar formulário
+                  <button
+                    type="button"
+                    className={`topbar-btn text-btn${saveStatus[selectedRow.key] === 'error' ? ' save-btn-error' : saveStatus[selectedRow.key] === 'saved' ? ' save-btn-saved' : ''}`}
+                    onClick={() => saveForm(selectedRow.key)}
+                    disabled={saveStatus[selectedRow.key] === 'saved'}
+                    style={{
+                      transition: 'all 200ms ease',
+                      color: saveStatus[selectedRow.key] === 'saved' ? '#1D9E75'
+                        : saveStatus[selectedRow.key] === 'error' ? '#E24B4A'
+                        : undefined,
+                    }}
+                  >
+                    {saveStatus[selectedRow.key] === 'saved' ? '✓ Salvo!'
+                      : saveStatus[selectedRow.key] === 'error' ? '⚠ Campos obrigatórios'
+                      : 'Salvar formulário'}
                   </button>
                 </div>
+                {saveErrors[selectedRow.key] && (
+                  <p style={{ fontSize: 12, color: '#E24B4A', marginTop: 6, marginLeft: 2 }}>
+                    {saveErrors[selectedRow.key]}
+                  </p>
+                )}
               </div>
             </section>
 
@@ -1002,10 +1042,6 @@ function IntegrationSection({
                   <span>SLA {selectedRow?.slaMinutes ?? 0} min</span>
                 </div>
               </div>
-            </div>
-            <div className="integration-store-floating-card">
-              <strong>{selectedMeta?.installNote}</strong>
-              <span>{selectedMeta?.reviewsCount}</span>
             </div>
           </div>
         </div>

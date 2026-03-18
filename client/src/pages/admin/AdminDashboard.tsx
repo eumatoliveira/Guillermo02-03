@@ -33,7 +33,9 @@ export default function AdminDashboard() {
   const openDrilldown = useAdminDashboardStore((state) => state.openDrilldown);
   const setPeriod = useAdminDashboardStore((state) => state.setPeriod);
   const setProduct = useAdminDashboardStore((state) => state.setProduct);
-  const { period, product, semaforo } = useAdminDashboardStore();
+  const period = useAdminDashboardStore((state) => state.period);
+  const product = useAdminDashboardStore((state) => state.product);
+  const semaforo = useAdminDashboardStore((state) => state.semaforo);
   const activeView = (params.get("view") as DashboardViewId) || "pipeline";
   const { data, isLoading } = useAdminDashboardView(activeView);
 

@@ -713,3 +713,37 @@ export const controlTowerSyncState = mysqlTable(
 
 export type ControlTowerSyncState = typeof controlTowerSyncState.$inferSelect;
 export type InsertControlTowerSyncState = typeof controlTowerSyncState.$inferInsert;
+
+/**
+ * Developer API keys for programmatic dashboard access
+ */
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").references(() => users.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  keyHash: varchar("keyHash", { length: 64 }).notNull().unique(), // SHA-256 hex
+  keyPrefix: varchar("keyPrefix", { length: 16 }).notNull(),     // e.g. "glx_live_Ab3x"
+  mode: mysqlEnum("mode", ["live", "sandbox"]).default("live").notNull(),
+  scopes: json("scopes").$type<string[]>().default([]),           // ["kpis","appointments","finance","nps"]
+  lastUsedAt: timestamp("lastUsedAt"),
+  expiresAt: timestamp("expiresAt"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = typeof apiKeys.$inferInsert;
+
+/**
+ * API usage log for rate limiting and analytics
+ */
+export const apiUsageLogs = mysqlTable("api_usage_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  apiKeyId: int("apiKeyId").references(() => apiKeys.id).notNull(),
+  endpoint: varchar("endpoint", { length: 100 }).notNull(),
+  method: varchar("method", { length: 10 }).notNull(),
+  statusCode: int("statusCode").notNull(),
+  responseTimeMs: int("responseTimeMs"),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

@@ -12,6 +12,7 @@ import { registerKommoWebhookRouter } from "../infrastructure/webhooks/kommoRout
 import { registerAsaasWebhookRouter } from "../infrastructure/webhooks/asaasRouter";
 import { currencyService } from "../domain/currencyService";
 import { exportRouter } from "../exportRouter";
+import { v1Router } from "../publicApi/v1Router";
 
 // ═══════════════════════════════════════════════════════════════
 // Port Discovery
@@ -212,6 +213,7 @@ function registerAppRoutes(app: Express) {
   registerKommoWebhookRouter(app);
   registerAsaasWebhookRouter(app);
   app.use("/api/export", exportRouter);
+  app.use("/api/v1", v1Router);
 
   app.use(
     "/api/trpc",

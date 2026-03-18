@@ -330,6 +330,45 @@ const phraseEntries: PhraseEntry[] = [
   { source: ["LGPD-safe | Investor packet"], en: "LGPD-safe | Investor packet", es: "Seguro LGPD | Paquete para inversor" },
   { source: ["PDF investidor gerado com sucesso!"], en: "Investor PDF generated successfully!", es: "¡PDF para inversor generado con éxito!" },
   { source: ["Erro na engine de PDF. Abrindo impressao..."], en: "PDF engine error. Opening print...", es: "Error en el motor PDF. Abriendo impresión..." },
+
+  // ── Score card labels (CEO dashboard) ────────────────────────────────────
+  { source: ["Financeiro"], en: "Finance", es: "Finanzas" },
+  { source: ["Leads Gerados"], en: "Leads Generated", es: "Leads Generados" },
+  { source: ["Margem Líquida (%)"], en: "Net Margin (%)", es: "Margen Neta (%)" },
+  { source: ["Inadimplência (%)"], en: "Default Rate (%)", es: "Morosidad (%)" },
+  { source: ["Despesas Fixas / Receita (%)"], en: "Fixed Costs / Revenue (%)", es: "Gastos Fijos / Ingresos (%)" },
+  { source: ["CPL — Custo por Paciente"], en: "CPL — Cost per Patient", es: "CPL — Costo por Paciente" },
+  { source: ["NPS Geral (0–10)"], en: "Overall NPS (0–10)", es: "NPS General (0–10)" },
+  { source: ["Tempo Médio de Espera (min)"], en: "Average Wait Time (min)", es: "Tiempo de Espera Promedio (min)" },
+  { source: ["Taxa de Retorno 90 dias (%)"], en: "90-Day Return Rate (%)", es: "Tasa de Retorno 90 días (%)" },
+  { source: ["SLA de Resposta ao Lead (h)"], en: "Lead Response SLA (h)", es: "SLA de Respuesta al Lead (h)" },
+
+  // ── Period suffixes ───────────────────────────────────────────────────────
+  { source: ["/ Semana"], en: "/ Week", es: "/ Semana" },
+  { source: ["/ Quinzena"], en: "/ Fortnight", es: "/ Quincena" },
+  { source: ["/ Mês"], en: "/ Month", es: "/ Mes" },
+  { source: ["/ Trimestre"], en: "/ Quarter", es: "/ Trimestre" },
+  { source: ["/ Semestre"], en: "/ Semester", es: "/ Semestre" },
+  { source: ["/ Ano"], en: "/ Year", es: "/ Año" },
+
+  // ── Score card meta texts ─────────────────────────────────────────────────
+  { source: ["Meta > 80% — agenda preenchida?"], en: "Goal > 80% — schedule filled?", es: "Meta > 80% — ¿agenda ocupada?" },
+  { source: ["Meta < 8% — 1 em cada 12 pode faltar"], en: "Goal < 8% — 1 in 12 may skip", es: "Meta < 8% — 1 de cada 12 puede faltar" },
+  { source: ["Meta > 85% — pacientes confirmaram?"], en: "Goal > 85% — patients confirmed?", es: "Meta > 85% — ¿pacientes confirmaron?" },
+  { source: ["Meta < 3 dias de espera"], en: "Goal < 3 days wait", es: "Meta < 3 días de espera" },
+  { source: ["Total recebido no período"], en: "Total received in period", es: "Total recibido en el período" },
+  { source: ["Meta > 20% — seu lucro real por R$100"], en: "Goal > 20% — your real profit per $100", es: "Meta > 20% — su ganancia real por $100" },
+  { source: ["Meta < 4% — quem não pagou?"], en: "Goal < 4% — who didn't pay?", es: "Meta < 4% — ¿quién no pagó?" },
+  { source: ["Meta < 45% — custo fixo sobre receita"], en: "Goal < 45% — fixed cost over revenue", es: "Meta < 45% — costo fijo sobre ingresos" },
+  { source: ["Novos interessados — crescendo?"], en: "New prospects — growing?", es: "Nuevos interesados — ¿creciendo?" },
+  { source: ["Meta > 25% — quantos viraram consulta?"], en: "Goal > 25% — how many became appointments?", es: "Meta > 25% — ¿cuántos se convirtieron en consulta?" },
+  { source: ["Custo por novo paciente captado"], en: "Cost per new patient acquired", es: "Costo por nuevo paciente captado" },
+  { source: ["Meta > 200% — marketing compensa?"], en: "Goal > 200% — is marketing worth it?", es: "Meta > 200% — ¿el marketing vale la pena?" },
+  { source: ["Meta > 8,5 — paciente indicaria você?"], en: "Goal > 8.5 — would patient refer you?", es: "Meta > 8,5 — ¿el paciente te recomendaría?" },
+  { source: ["Meta < 12 min em sala de espera"], en: "Goal < 12 min in waiting room", es: "Meta < 12 min en sala de espera" },
+  { source: ["Meta > 40% — paciente voltou em 90 dias?"], en: "Goal > 40% — patient returned in 90 days?", es: "Meta > 40% — ¿el paciente volvió en 90 días?" },
+  { source: ["Meta < 1h para responder o paciente"], en: "Goal < 1h to respond to patient", es: "Meta < 1h para responder al paciente" },
+  { source: ["Visão CEO — Painel Executivo Completo"], en: "CEO View — Full Executive Dashboard", es: "Vista CEO — Panel Ejecutivo Completo" },
 ];
 
 const replacementsByLanguage: Record<DashboardLanguage, Array<[string, string]>> = {
