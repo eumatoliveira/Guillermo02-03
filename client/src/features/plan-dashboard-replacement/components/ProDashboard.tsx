@@ -9,6 +9,7 @@ import { AgendaNoShowModule } from './modules/AgendaNoShowModule';
 import { FinanceiroModule } from './modules/FinanceiroModule';
 import { MarketingModule } from './modules/MarketingModule';
 import { OperacaoUXModule } from './modules/OperacaoUXModule';
+import { AIAssistantModule } from './modules/AIAssistantModule';
 import {
   type Appointment, Filters, getAllAppointments, applyFilters, computeKPIs,
   computeByProfessional, computeByChannel, computeByProcedure,
@@ -945,6 +946,11 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
           </div></div>
         </div>
       </>)}
+
+      {/* ===== ASSISTENTE IA ===== */}
+      {activeTab === 7 && (
+        <AIAssistantModule kpis={kpis} fmt={fmt} />
+      )}
     </div>
   );
 }

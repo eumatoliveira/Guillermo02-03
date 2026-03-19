@@ -146,7 +146,7 @@ function resolveExportRole(user: unknown): string {
 
 const sidebarMenus: Record<Plan, { items: string[] }> = {
   ESSENTIAL: { items: ['Visão CEO', 'Agenda & No-Show', 'Financeiro Executivo', 'Marketing & Captação', 'Operação & UX', 'Integrações'] },
-  PRO: { items: ['Visão CEO', 'Financeiro Avançado', 'Agenda/No-Show', 'Marketing', 'Integrações', 'Operação & Experiência', 'Equipe'] },
+  PRO: { items: ['Visão CEO', 'Financeiro Avançado', 'Agenda/No-Show', 'Marketing', 'Integrações', 'Operação & Experiência', 'Equipe', 'Assistente IA'] },
   ENTERPRISE: { items: ['Visão CEO', 'Financeiro — Investidor', 'Agenda/No-Show', 'Marketing', 'Multi-Unidade', 'Integrações', 'Operação & Experiência', 'Equipe', 'Governança'] },
 };
 
