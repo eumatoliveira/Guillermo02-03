@@ -1,6 +1,7 @@
 import { useMemo, useCallback, memo, useState } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useTranslation } from '../i18n';
 import { getChartTheme } from '../utils/chartOptions';
 import FilterBar from './FilterBar';
 import IntegrationSection from './IntegrationSection';
@@ -92,6 +93,7 @@ const EMPTY_TEAM_MEMBER_FORM: TeamMemberForm = {
 
 function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange, lang = "PT", appointments, integrationHealth }: Props) {
   const { currency, convertMoneyValue, formatCompactMoney, formatMoney, moneyTitle } = useCurrency();
+  const { t } = useTranslation();
   const fmt = useCallback((value: number) => formatCompactMoney(value), [formatCompactMoney]);
   const ct = useMemo(() => getChartTheme(theme, visualScale), [theme, visualScale]);
   const allData = useMemo(() => appointments ?? getAllAppointments(), [appointments]);
@@ -681,21 +683,13 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
           inverted ? (v <= good ? CL.green : v <= warn ? CL.amber : CL.red)
                    : (v >= good ? CL.green : v >= warn ? CL.amber : CL.red);
 
-        // Period-aware label suffix
-        const pSuffix = filters.period === '7d'   ? '/ SEMANA'
-                      : filters.period === '15d'  ? '/ QUINZENA'
-                      : filters.period === '30d'  ? '/ MÊS'
-                      : filters.period === '3m'   ? '/ TRIMESTRE'
-                      : filters.period === '6m'   ? '/ SEMESTRE'
-                      : '/ ANO';
-
-        // Period-aware description suffix for contextual labels
-        const pDesc = filters.period === '7d'   ? 'na semana'
-                    : filters.period === '15d'  ? 'na quinzena'
-                    : filters.period === '30d'  ? 'no mês'
-                    : filters.period === '3m'   ? 'no trimestre'
-                    : filters.period === '6m'   ? 'no semestre'
-                    : 'no ano';
+        // Period-aware label suffix — translated via i18n
+        const pSuffix = t(filters.period === '7d'  ? '/ Semana'
+                        : filters.period === '15d' ? '/ Quinzena'
+                        : filters.period === '30d' ? '/ Mês'
+                        : filters.period === '3m'  ? '/ Trimestre'
+                        : filters.period === '6m'  ? '/ Semestre'
+                        : '/ Ano');
 
         const convLeadToAppt = (() => {
           const latest = marketingProWeeks[marketingProWeeks.length - 1];
@@ -709,39 +703,39 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
 
         const cols = [
           {
-            icon: '📋', title: 'AGENDA & NO-SHOW',
+            icon: '📋', title: t('Agenda & No-Show'),
             cards: [
-              { label:'TAXA DE OCUPAÇÃO (%)',              value:`${kpis.occupancyRate.toFixed(1)}%`,       color:cl(kpis.occupancyRate,80,60),         desc:`Meta > 80% — agenda preenchida ${pDesc}?` },
-              { label:'TAXA DE NO-SHOW (%)',               value:`${kpis.noShowRate.toFixed(1)}%`,          color:cl(kpis.noShowRate,8,12,true),        desc:`Meta < 8% — faltas ${pDesc}` },
-              { label:'CONFIRMAÇÕES REALIZADAS (%)',        value:`${kpis.confirmationRate.toFixed(1)}%`,    color:cl(kpis.confirmationRate,85,70),      desc:'Meta > 85% — pacientes confirmaram?' },
-              { label:'LEAD TIME DO AGENDAMENTO (DIAS)',    value:`${kpis.leadTimeDays.toFixed(1)}d`,        color:cl(kpis.leadTimeDays,3,7,true),       desc:'Meta < 3 dias — antecedência do agendamento' },
+              { label:t('Taxa de Ocupação (%)'),              value:`${kpis.occupancyRate.toFixed(1)}%`,      color:cl(kpis.occupancyRate,80,60),                              desc:t('Meta > 80% — agenda preenchida?') },
+              { label:t('Taxa de No-Show (%)'),               value:`${kpis.noShowRate.toFixed(1)}%`,         color:cl(kpis.noShowRate,8,12,true),                             desc:t('Meta < 8% — 1 em cada 12 pode faltar') },
+              { label:t('Confirmações Realizadas (%)'),        value:`${kpis.confirmationRate.toFixed(1)}%`,   color:cl(kpis.confirmationRate,85,70),                           desc:t('Meta > 85% — pacientes confirmaram?') },
+              { label:t('Lead Time do Agendamento (dias)'),    value:`${kpis.leadTimeDays.toFixed(1)}d`,       color:cl(kpis.leadTimeDays,3,7,true),                            desc:t('Meta < 3 dias de espera') },
             ],
           },
           {
-            icon: '💰', title: 'FINANCEIRO',
+            icon: '💰', title: t('Financeiro'),
             cards: [
-              { label:`FATURAMENTO BRUTO ${pSuffix}`,        value:fmt(kpis.grossRevenue),                   color:CL.amber,                             desc:`Total recebido ${pDesc}` },
-              { label:'MARGEM LÍQUIDA (%)',                 value:`${kpis.margin.toFixed(1)}%`,             color:cl(kpis.margin,25,15),                desc:'Meta > 20% — seu lucro real por R$100' },
-              { label:'INADIMPLÊNCIA (%)',                  value:`${kpis.inadimplenciaRate.toFixed(1)}%`,  color:cl(kpis.inadimplenciaRate,4,8,true),  desc:'Meta < 4% — quem não pagou?' },
-              { label:'DESPESAS FIXAS / RECEITA (%)',       value:`${kpis.fixedExpenseRatio.toFixed(1)}%`,  color:cl(kpis.fixedExpenseRatio,45,55,true),desc:'Meta < 45% — custo fixo sobre receita' },
+              { label:`${moneyTitle('Faturamento Bruto')} ${pSuffix}`, value:fmt(kpis.grossRevenue),          color:CL.amber,                                                  desc:t('Total recebido no período') },
+              { label:t('Margem Líquida (%)'),                 value:`${kpis.margin.toFixed(1)}%`,            color:cl(kpis.margin,25,15),                                     desc:t('Meta > 20% — seu lucro real por R$100') },
+              { label:t('Inadimplência (%)'),                  value:`${kpis.inadimplenciaRate.toFixed(1)}%`, color:cl(kpis.inadimplenciaRate,4,8,true),                       desc:t('Meta < 4% — quem não pagou?') },
+              { label:t('Despesas Fixas / Receita (%)'),       value:`${kpis.fixedExpenseRatio.toFixed(1)}%`, color:cl(kpis.fixedExpenseRatio,45,55,true),                     desc:t('Meta < 45% — custo fixo sobre receita') },
             ],
           },
           {
-            icon: '🚀', title: 'MARKETING & CAPTAÇÃO',
+            icon: '🚀', title: t('Marketing & Captação'),
             cards: [
-              { label:`LEADS GERADOS ${pSuffix}`,            value:`${kpis.leads}`,                          color:kpis.leads>=80?CL.green:kpis.leads>=40?CL.amber:CL.red, desc:`Novos interessados captados ${pDesc}` },
-              { label:'CONVERSÃO LEAD → AGENDAMENTO (%)',   value:`${convLeadToAppt.toFixed(1)}%`,          color:cl(convLeadToAppt,22,15),             desc:'Meta > 25% — quantos viraram consulta?' },
-              { label:'CPL — CUSTO POR PACIENTE',          value:fmt(kpis.cpl),                            color:cl(kpis.cpl,kpis.avgTicket/4,kpis.avgTicket*0.6,true), desc:'Custo por novo paciente captado' },
-              { label:'ROI POR CANAL (%)',                  value:roiLabel,                                 color:roiColor,                             desc:'Meta > 200% — marketing compensa?' },
+              { label:`${t('Leads Gerados')} ${pSuffix}`,      value:`${kpis.leads}`,                         color:kpis.leads>=80?CL.green:kpis.leads>=40?CL.amber:CL.red,   desc:t('Novos interessados — crescendo?') },
+              { label:t('Conversão Lead → Agendamento (%)'),   value:`${convLeadToAppt.toFixed(1)}%`,         color:cl(convLeadToAppt,22,15),                                  desc:t('Meta > 25% — quantos viraram consulta?') },
+              { label:t('CPL — Custo por Paciente'),           value:fmt(kpis.cpl),                           color:cl(kpis.cpl,kpis.avgTicket/4,kpis.avgTicket*0.6,true),    desc:t('Custo por novo paciente captado') },
+              { label:t('ROI por Canal (%)'),                  value:roiLabel,                                color:roiColor,                                                  desc:t('Meta > 200% — marketing compensa?') },
             ],
           },
           {
-            icon: '⚙️', title: 'OPERAÇÃO & UX',
+            icon: '⚙️', title: t('Operação & UX'),
             cards: [
-              { label:'NPS GERAL (0–10)',                   value:`${kpis.avgNPS.toFixed(1)}`,              color:cl(kpis.avgNPS,8.5,7),                desc:'Meta > 8,5 — paciente indicaria você?' },
-              { label:'TEMPO MÉDIO DE ESPERA (MIN)',        value:`${kpis.avgWait.toFixed(0)} min`,         color:cl(kpis.avgWait,12,20,true),          desc:'Meta < 12 min em sala de espera' },
-              { label:'TAXA DE RETORNO 90 DIAS (%)',        value:`${kpis.returnRate.toFixed(1)}%`,         color:cl(kpis.returnRate,40,25),            desc:'Meta > 40% — paciente voltou em 90 dias?' },
-              { label:'SLA DE RESPOSTA AO LEAD (H)',        value:`${kpis.slaLeadHours.toFixed(2)}h`,       color:cl(kpis.slaLeadHours,1,2,true),       desc:'Meta < 1h para responder o paciente' },
+              { label:t('NPS Geral (0–10)'),                   value:`${kpis.avgNPS.toFixed(1)}`,             color:cl(kpis.avgNPS,8.5,7),                                     desc:t('Meta > 8,5 — paciente indicaria você?') },
+              { label:t('Tempo Médio de Espera (min)'),        value:`${kpis.avgWait.toFixed(0)} min`,        color:cl(kpis.avgWait,12,20,true),                               desc:t('Meta < 12 min em sala de espera') },
+              { label:t('Taxa de Retorno 90 dias (%)'),        value:`${kpis.returnRate.toFixed(1)}%`,        color:cl(kpis.returnRate,40,25),                                 desc:t('Meta > 40% — paciente voltou em 90 dias?') },
+              { label:t('SLA de Resposta ao Lead (h)'),        value:`${kpis.slaLeadHours.toFixed(2)}h`,      color:cl(kpis.slaLeadHours,1,2,true),                            desc:t('Meta < 1h para responder o paciente') },
             ],
           },
         ];
