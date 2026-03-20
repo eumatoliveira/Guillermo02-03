@@ -473,8 +473,8 @@ function EssentialDashboard({ activeTab, filters, onFiltersChange, appointments,
         <div className="overview-row">
           <div className="overview-card"><div className="overview-card-label">Total Agendamentos</div><div className="overview-card-value">{kpis.total}</div></div>
           <div className="overview-card"><div className="overview-card-label">Consultas Realizadas</div><div className="overview-card-value">{kpis.realized}</div></div>
-          <div className="overview-card"><div className="overview-card-label">Taxa de Ocupação</div><div className="overview-card-value">{kpis.occupancyRate.toFixed(1)}%</div></div>
-          <div className="overview-card"><div className="overview-card-label">Taxa de No-Show</div><div className="overview-card-value" style={{color:kpis.noShowRate>10?'var(--yellow)':'var(--green)'}}>{kpis.noShowRate.toFixed(1)}%</div></div>
+          <div className="overview-card"><div className="overview-card-label">Taxa de Ocupação</div><div className="overview-card-value" style={{color:kpis.occupancyRate>=80?'var(--green)':kpis.occupancyRate>=60?'var(--yellow)':'var(--red)'}}>{kpis.occupancyRate.toFixed(1)}%</div></div>
+          <div className="overview-card"><div className="overview-card-label">Taxa de No-Show</div><div className="overview-card-value" style={{color:kpis.noShowRate<=8?'var(--green)':kpis.noShowRate<=12?'var(--yellow)':'var(--red)'}}>{kpis.noShowRate.toFixed(1)}%</div></div>
           <div className="overview-card"><div className="overview-card-label">Taxa de Confirmações</div><div className="overview-card-value" style={{color:kpis.confirmationRate>=85?'var(--green)':kpis.confirmationRate>=70?'var(--yellow)':'var(--red)'}}>{kpis.confirmationRate.toFixed(1)}%</div></div>
           <div className="overview-card"><div className="overview-card-label">Lead Time do Agendamento</div><div className="overview-card-value" style={{color:kpis.leadTimeDays<=3?'var(--green)':kpis.leadTimeDays<=7?'var(--yellow)':'var(--red)'}}>{kpis.leadTimeDays.toFixed(1)}d</div></div>
           {(() => {
@@ -505,10 +505,26 @@ function EssentialDashboard({ activeTab, filters, onFiltersChange, appointments,
       {activeTab === 2 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Financeiro Executivo</h2></div>
         <div className="overview-row">
-          <div className="overview-card"><div className="overview-card-label no-kpi-source">Faturamento Bruto</div><div className="overview-card-value">{renderMoneyValueWithSmallSymbol(fmt(financeCurrent?.gross ?? 0))}</div></div>
-          <div className="overview-card"><div className="overview-card-label no-kpi-source">Receita Líquida</div><div className="overview-card-value">{renderMoneyValueWithSmallSymbol(fmt(financeCurrent?.net ?? 0))}</div></div>
-          <div className="overview-card"><div className="overview-card-label no-kpi-source">Margem Líquida</div><div className="overview-card-value" style={{color:(financeCurrent?.marginPct ?? 0) >= 18 ? 'var(--green)' : 'var(--yellow)'}}>{(financeCurrent?.marginPct ?? 0).toFixed(1)}%</div></div>
-          <div className="overview-card"><div className="overview-card-label no-kpi-source">Ticket Médio</div><div className="overview-card-value">{renderMoneyValueWithSmallSymbol(fmt(financeCurrent?.ticketAvg ?? 0))}</div></div>
+          {(() => {
+            const gross = financeCurrent?.gross ?? 0;
+            const net   = financeCurrent?.net   ?? 0;
+            const margin = financeCurrent?.marginPct ?? 0;
+            const ticket = financeCurrent?.ticketAvg ?? 0;
+            const prevTicket = financePrev?.ticketAvg ?? ticket;
+            const weeklyTarget = 120_000 / Math.max(financeWeeks.length, 1);
+            const grossColor  = gross >= weeklyTarget ? 'var(--green)' : gross >= weeklyTarget * 0.80 ? 'var(--yellow)' : 'var(--red)';
+            const netRatio    = gross > 0 ? net / gross : 1;
+            const netColor    = netRatio >= 0.92 ? 'var(--green)' : netRatio >= 0.85 ? 'var(--yellow)' : 'var(--red)';
+            const marginColor = margin >= 20 ? 'var(--green)' : margin >= 12 ? 'var(--yellow)' : 'var(--red)';
+            const ticketDrop  = prevTicket > 0 ? (prevTicket - ticket) / prevTicket : 0;
+            const ticketColor = ticketDrop < 0 ? 'var(--green)' : ticketDrop < 0.10 ? 'var(--yellow)' : 'var(--red)';
+            return (<>
+              <div className="overview-card"><div className="overview-card-label no-kpi-source">Faturamento Bruto</div><div className="overview-card-value" style={{color:grossColor}}>{renderMoneyValueWithSmallSymbol(fmt(gross))}</div></div>
+              <div className="overview-card"><div className="overview-card-label no-kpi-source">Receita Líquida</div><div className="overview-card-value" style={{color:netColor}}>{renderMoneyValueWithSmallSymbol(fmt(net))}</div></div>
+              <div className="overview-card"><div className="overview-card-label no-kpi-source">Margem Líquida</div><div className="overview-card-value" style={{color:marginColor}}>{margin.toFixed(1)}%</div></div>
+              <div className="overview-card"><div className="overview-card-label no-kpi-source">Ticket Médio</div><div className="overview-card-value" style={{color:ticketColor}}>{renderMoneyValueWithSmallSymbol(fmt(ticket))}</div></div>
+            </>);
+          })()}
           <div className="overview-card"><div className="overview-card-label no-kpi-source">Inadimplência (%)</div><div className="overview-card-value" style={{ color: delinquencyColor }}>{delinquencyCurrent.toFixed(1)}%</div></div>
           <div className="overview-card"><div className="overview-card-label no-kpi-source">Despesas Fixas/Receita (%)</div><div className="overview-card-value" style={{ color: fixedExpenseRatioColor }}>{fixedExpenseRatioCurrent.toFixed(1)}%</div></div>
           <div className="overview-card"><div className="overview-card-label no-kpi-source">Posição de Caixa</div><div className="overview-card-value" style={{ color: cashPositionColor }}>{renderMoneyValueWithSmallSymbol(fmt(cashCurrentValue))}</div></div>
@@ -519,10 +535,22 @@ function EssentialDashboard({ activeTab, filters, onFiltersChange, appointments,
       {activeTab === 3 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Marketing & Captação</h2></div>
         <div className="overview-row">
-          <div className="overview-card"><div className="overview-card-label">Leads</div><div className="overview-card-value">{marketingCurrent?.leads ?? 0}</div></div>
-          <div className="overview-card"><div className="overview-card-label">Taxa de Conversão Lead → Agendamento</div><div className="overview-card-value">{renderPercentValueWithSmallSymbol(marketingCurrent?.conversion ?? 0, 1)}</div></div>
-          <div className="overview-card"><div className="overview-card-label">Custo por Lead (CPL)</div><div className="overview-card-value">{renderMoneyValueWithSmallSymbol(fmt(marketingCurrent?.cpl ?? 0))}</div></div>
-          <div className="overview-card"><div className="overview-card-label">ROI Médio</div><div className="overview-card-value" style={{color:(marketingByChannel.reduce((s,c)=>s+c.roi,0)/Math.max(marketingByChannel.length,1)) > 200 ? 'var(--green)' : 'var(--yellow)'}}>{renderPercentValueWithSmallSymbol((marketingByChannel.reduce((s,c)=>s+c.roi,0)/Math.max(marketingByChannel.length,1)), 0)}</div></div>
+          {(() => {
+            const leads = marketingCurrent?.leads ?? 0;
+            const conv  = marketingCurrent?.conversion ?? 0;
+            const cpl   = marketingCurrent?.cpl ?? 0;
+            const avgRoi = marketingByChannel.reduce((s,c)=>s+c.roi,0) / Math.max(marketingByChannel.length, 1);
+            const leadsColor = leads >= 80 ? 'var(--green)' : leads >= 40 ? 'var(--yellow)' : 'var(--red)';
+            const convColor  = conv >= 35  ? 'var(--green)' : conv >= 20  ? 'var(--yellow)' : 'var(--red)';
+            const cplColor   = cpl <= kpis.avgTicket / 4 ? 'var(--green)' : cpl <= kpis.avgTicket * 0.6 ? 'var(--yellow)' : 'var(--red)';
+            const roiColor   = avgRoi >= 200 ? 'var(--green)' : avgRoi >= 100 ? 'var(--yellow)' : 'var(--red)';
+            return (<>
+              <div className="overview-card"><div className="overview-card-label">Leads</div><div className="overview-card-value" style={{color:leadsColor}}>{leads}</div></div>
+              <div className="overview-card"><div className="overview-card-label">Taxa de Conversão Lead → Agendamento</div><div className="overview-card-value" style={{color:convColor}}>{renderPercentValueWithSmallSymbol(conv, 1)}</div></div>
+              <div className="overview-card"><div className="overview-card-label">Custo por Lead (CPL)</div><div className="overview-card-value" style={{color:cplColor}}>{renderMoneyValueWithSmallSymbol(fmt(cpl))}</div></div>
+              <div className="overview-card"><div className="overview-card-label">ROI Médio</div><div className="overview-card-value" style={{color:roiColor}}>{renderPercentValueWithSmallSymbol(avgRoi, 0)}</div></div>
+            </>);
+          })()}
         </div>
         <MarketingModule weeklyData={agendaWeeks} filtered={filtered} kpis={kpis} filters={filters} showTargets={filters.severity !== ''} plan="ESSENTIAL" />
       </>)}
@@ -539,10 +567,21 @@ function EssentialDashboard({ activeTab, filters, onFiltersChange, appointments,
       {activeTab === 4 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Operação & UX</h2></div>
         <div className="overview-row">
-          <div className="overview-card"><div className="overview-card-label">NPS Geral</div><div className="overview-card-value" style={{color:npsGaugeValue >= 8 ? 'var(--green)' : 'var(--yellow)'}}>{npsGaugeValue}</div></div>
-          <div className="overview-card"><div className="overview-card-label">Espera média</div><div className="overview-card-value">{(opsCurrent?.waitMinutes ?? kpis.avgWait).toFixed(0)} min</div></div>
-          <div className="overview-card"><div className="overview-card-label">Retorno {periodReturnLabel}</div><div className="overview-card-value">{(opsCurrent?.return90d ?? kpis.returnRate).toFixed(1)}%</div></div>
-          <div className="overview-card"><div className="overview-card-label">SLA Lead</div><div className="overview-card-value">{(opsCurrent?.slaLeadHours ?? 0).toFixed(2)}h</div></div>
+          {(() => {
+            const wait = opsCurrent?.waitMinutes ?? kpis.avgWait;
+            const ret  = opsCurrent?.return90d   ?? kpis.returnRate;
+            const sla  = opsCurrent?.slaLeadHours ?? 0;
+            const npsColor  = npsGaugeValue >= 8.5 ? 'var(--green)' : npsGaugeValue >= 7.5 ? 'var(--yellow)' : 'var(--red)';
+            const waitColor = wait <= 12 ? 'var(--green)' : wait <= 25 ? 'var(--yellow)' : 'var(--red)';
+            const retColor  = ret  >= 40 ? 'var(--green)' : ret  >= 25 ? 'var(--yellow)' : 'var(--red)';
+            const slaColor  = sla  <= 1  ? 'var(--green)' : sla  <= 4  ? 'var(--yellow)' : 'var(--red)';
+            return (<>
+              <div className="overview-card"><div className="overview-card-label">NPS Geral</div><div className="overview-card-value" style={{color:npsColor}}>{npsGaugeValue}</div></div>
+              <div className="overview-card"><div className="overview-card-label">Espera Média</div><div className="overview-card-value" style={{color:waitColor}}>{wait.toFixed(0)} min</div></div>
+              <div className="overview-card"><div className="overview-card-label">Retorno {periodReturnLabel}</div><div className="overview-card-value" style={{color:retColor}}>{ret.toFixed(1)}%</div></div>
+              <div className="overview-card"><div className="overview-card-label">SLA Lead</div><div className="overview-card-value" style={{color:slaColor}}>{sla.toFixed(2)}h</div></div>
+            </>);
+          })()}
         </div>
         <OperacaoUXModule opsWeeks={opsWeeks} filtered={filtered} kpis={kpis} byProf={byProf} filters={filters} showTargets={filters.severity !== ''} plan="ESSENTIAL" />
       </>)}    </div>

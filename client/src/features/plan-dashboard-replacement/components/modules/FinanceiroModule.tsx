@@ -198,43 +198,235 @@ export function FinanceiroModule({ financeWeeks, filtered, kpis, showTargets, pl
 
   return (
     <div className="chart-grid">
-      {/* KPI 9 — Gross revenue */}
-      <ChartCard title="Faturamento Bruto" priority={grossPriority} kpiValue={fmtK(kpis.grossRevenue)} subtitle="Total faturado no período antes de deduções" note="Barras = faturamento por período. Linha roxa = média móvel (3 períodos).">
-        <ResponsiveContainer width="100%" height={200}>
-          <ComposedChart data={grossWithAvg} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-            <CartesianGrid {...GR} />
-            <XAxis dataKey="label" tick={TK} />
-            <YAxis tick={TK} tickFormatter={fmtK} />
-            <Tooltip {...TS} formatter={(v: any, n: any) => [fmtK(v), n === 'gross' ? 'Faturamento' : 'Média móvel']} />
-            <Bar dataKey="gross" name="gross" fill={C.blue} radius={[4,4,0,0]} animationDuration={300} />
-            <Line type="monotone" dataKey="avg" name="avg" stroke={C.purple} strokeWidth={2} dot={false} animationDuration={300} />
-            <ReferenceLine y={THRESHOLDS.gross.target} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Meta ${fmtK(THRESHOLDS.gross.target)}`, fill: C.green, fontSize: 10 }} />
-            <ReferenceLine y={THRESHOLDS.gross.target * THRESHOLDS.gross.p2} stroke={C.amber} strokeDasharray="4 4" strokeWidth={1} label={{ value: `P2 ${fmtK(THRESHOLDS.gross.target * THRESHOLDS.gross.p2)}`, fill: C.amber, fontSize: 10 }} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </ChartCard>
+      {/* KPI 9 — Faturamento Bruto (pure SVG) */}
+      {(() => {
+        const numP       = grossWithAvg.length || 1;
+        const weeklyMeta = Math.round(THRESHOLDS.gross.target / numP);
+        const weeklyP3   = Math.round(weeklyMeta * THRESHOLDS.gross.p2);
+        const mtdPct     = Math.round((kpis.grossRevenue / THRESHOLDS.gross.target) * 100);
 
-      {/* KPI 10 — Net revenue */}
-      <ChartCard title="Receita Líquida" priority={netPriority} kpiValue={fmtK(kpis.netRevenue)} subtitle="Faturamento bruto menos deduções, cancelamentos e inadimplência" note="Área verde = receita líquida. Linha tracejada = faturamento bruto (referência).">
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={netSeries} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-            <defs>
-              <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={C.green} stopOpacity={0.25} />
-                <stop offset="100%" stopColor={C.green} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...GR} />
-            <XAxis dataKey="label" tick={TK} />
-            <YAxis tick={TK} tickFormatter={fmtK} />
-            <Tooltip {...TS} formatter={(v: any, n: any) => [fmtK(v), n === 'net' ? 'Líquida' : 'Bruta']} />
-            <Area type="monotone" dataKey="net" name="net" stroke={C.green} strokeWidth={2} fill="url(#netGrad)" animationDuration={300} />
-            <Line type="monotone" dataKey="gross" name="gross" stroke={C.blue} strokeWidth={1} strokeDasharray="3 3" dot={false} animationDuration={300} />
-            <ReferenceLine y={kpis.grossRevenue * THRESHOLDS.net.p1} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `P1 92%`, fill: C.green, fontSize: 10 }} />
-            <ReferenceLine y={kpis.grossRevenue * THRESHOLDS.net.p3} stroke={C.red}   strokeDasharray="4 4" strokeWidth={1}   label={{ value: `P3 85%`, fill: C.red,   fontSize: 10 }} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </ChartCard>
+        // Trend direction: last mov-avg vs previous
+        const lastAvg = movAvg[movAvg.length - 1] ?? 0;
+        const prevAvg = movAvg[Math.max(0, movAvg.length - 2)] ?? lastAvg;
+        const trendColor = lastAvg >= prevAvg ? C.green : C.red;
+
+        // SVG layout
+        const W = 500, H = 175;
+        const PAD = { top: 22, right: 64, bottom: 28, left: 46 };
+        const cW = W - PAD.left - PAD.right;
+        const cH = H - PAD.top - PAD.bottom;
+        const maxVal = Math.max(...grossWithAvg.map(d => d.gross), weeklyMeta) * 1.20;
+        const bW = Math.max(18, (cW / numP) * 0.55);
+        const px = (i: number) => PAD.left + (i + 0.5) * (cW / numP);
+        const py = (v: number) => PAD.top + cH * (1 - v / maxVal);
+
+        // Y-axis: 4 round ticks
+        const step = Math.ceil(maxVal / 4 / 5000) * 5000;
+        const yTicks = [0, 1, 2, 3, 4].map(n => n * step).filter(v => v <= maxVal * 1.02);
+
+        // Trend path
+        const trendPath = grossWithAvg
+          .map((d, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(d.avg).toFixed(1)}`)
+          .join(' ');
+
+        return (
+          <ChartCard
+            title="Faturamento Bruto"
+            priority={grossPriority}
+            kpiValue={fmtK(kpis.grossRevenue)}
+            subtitle={`${fmtK(kpis.grossRevenue)} de ${fmtK(THRESHOLDS.gross.target)} meta (${mtdPct}%)`}
+            note={`Barras = faturamento por período · Linha = média móvel 3p · Meta semanal = ${fmtK(weeklyMeta)}`}
+          >
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:'block', overflow:'visible' }}>
+              {/* Subtle grid + Y labels */}
+              {yTicks.map(v => (
+                <g key={v}>
+                  <line x1={PAD.left} y1={py(v)} x2={PAD.left + cW} y2={py(v)}
+                    stroke="var(--chart-grid,#e5e7eb)" strokeWidth={0.5} strokeOpacity={0.6} />
+                  <text x={PAD.left - 5} y={py(v) + 4} textAnchor="end" fontSize={9}
+                    fill="var(--text-muted,#9ca3af)">{fmtK(v)}</text>
+                </g>
+              ))}
+
+              {/* P3 dashed line (red) */}
+              <line x1={PAD.left} y1={py(weeklyP3)} x2={PAD.left + cW} y2={py(weeklyP3)}
+                stroke={C.red} strokeWidth={1} strokeDasharray="4 3" strokeOpacity={0.7} />
+              <text x={PAD.left + cW + 5} y={py(weeklyP3) + 4} fontSize={9} fill={C.red}>P3</text>
+
+              {/* P1 meta dashed line (green) */}
+              <line x1={PAD.left} y1={py(weeklyMeta)} x2={PAD.left + cW} y2={py(weeklyMeta)}
+                stroke={C.green} strokeWidth={1.5} strokeDasharray="5 3" strokeOpacity={0.85} />
+              <text x={PAD.left + cW + 5} y={py(weeklyMeta) + 4} fontSize={9} fill={C.green}>
+                P1 meta
+              </text>
+
+              {/* Bars */}
+              {grossWithAvg.map((d, i) => {
+                const isPartial = i === numP - 1;
+                const barColor  = d.gross >= weeklyMeta ? C.blue : '#F97316';
+                const barH      = Math.max(2, (d.gross / maxVal) * cH);
+                const bx        = px(i) - bW / 2;
+                const by        = py(d.gross);
+                return (
+                  <g key={i}>
+                    <rect x={bx} y={by} width={bW} height={barH}
+                      fill={barColor} fillOpacity={isPartial ? 0.42 : 0.88} rx={3} />
+                    {isPartial && (
+                      <text x={px(i)} y={by - 7} textAnchor="middle" fontSize={7.5}
+                        fill={barColor} opacity={0.85} fontStyle="italic">em andamento</text>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* Trend line */}
+              <path d={trendPath} fill="none" stroke={trendColor} strokeWidth={2.5}
+                strokeLinejoin="round" strokeLinecap="round" opacity={0.9} />
+              {grossWithAvg.map((d, i) => (
+                <circle key={i} cx={px(i)} cy={py(d.avg)} r={3}
+                  fill={trendColor} stroke="var(--panel-bg,#fff)" strokeWidth={1.5} />
+              ))}
+
+              {/* X-axis labels */}
+              {grossWithAvg.map((d, i) => (
+                <text key={i} x={px(i)} y={H - 5} textAnchor="middle" fontSize={9}
+                  fill="var(--text-muted,#9ca3af)">{d.label}</text>
+              ))}
+            </svg>
+          </ChartCard>
+        );
+      })()}
+
+      {/* KPI 10 — Receita Líquida (pure SVG) */}
+      {(() => {
+        const numP = netSeries.length || 1;
+        const W = 500, H = 190;
+        const PAD = { top: 22, right: 64, bottom: 28, left: 46 };
+        const cW = W - PAD.left - PAD.right;
+        const cH = H - PAD.top - PAD.bottom;
+
+        // P1/P3 reference values (weekly equivalents based on cumulative gross avg)
+        const weeklyGross = Math.round(kpis.grossRevenue / numP);
+        const p1Line = Math.round(weeklyGross * THRESHOLDS.net.p1); // 92%
+        const p3Line = Math.round(weeklyGross * THRESHOLDS.net.p3); // 85%
+
+        const maxVal = Math.max(...netSeries.map(d => d.gross), p1Line) * 1.18;
+        const px = (i: number) => PAD.left + (i + 0.5) * (cW / numP);
+        const py = (v: number) => PAD.top + cH * (1 - v / maxVal);
+
+        // Y-axis ticks
+        const step = Math.ceil(maxVal / 4 / 5000) * 5000;
+        const yTicks = [0, 1, 2, 3, 4].map(n => n * step).filter(v => v <= maxVal * 1.02);
+
+        // Points for bruto (dashed blue) and liquida (solid green)
+        const brutoPts: [number, number][] = netSeries.map((d, i) => [px(i), py(d.gross)]);
+        const liqPts:   [number, number][] = netSeries.map((d, i) => [px(i), py(d.net)]);
+
+        const brutoPolyline = brutoPts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+        const liqPolyline   = liqPts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+
+        // Red polygon: forward along bruto, backward along liquida
+        const redPoly = [
+          ...brutoPts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`),
+          ...[...liqPts].reverse().map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`),
+        ].join(' ');
+
+        // Green polygon: forward along liquida, close at bottom
+        const baseline = py(0);
+        const greenPoly = [
+          ...liqPts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`),
+          `${(PAD.left + cW).toFixed(1)},${baseline.toFixed(1)}`,
+          `${PAD.left.toFixed(1)},${baseline.toFixed(1)}`,
+        ].join(' ');
+
+        // Subtitle values
+        const netPctOfGross = Math.round((kpis.netRevenue / Math.max(1, kpis.grossRevenue)) * 100);
+        const deducaoTotal  = netSeries.reduce((s, d) => s + (d.gross - d.net), 0);
+
+        // "perda" label: last data point gap midpoint
+        const lastD     = netSeries[netSeries.length - 1];
+        const lossLabelX = px(numP - 1);
+        const lossLabelY = lastD ? (py(lastD.gross) + py(lastD.net)) / 2 : 0;
+
+        return (
+          <ChartCard
+            title="Receita Líquida"
+            priority={netPriority}
+            kpiValue={fmtK(kpis.netRevenue)}
+            subtitle={`${fmtK(kpis.netRevenue)} líquida · ${netPctOfGross}% do bruto · Dedução: ${fmtK(deducaoTotal)}`}
+            note="Linha tracejada azul = faturamento bruto · Linha verde = receita líquida · Área vermelha = deduções"
+          >
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
+              {/* Y-axis grid + labels */}
+              {yTicks.map(v => (
+                <g key={v}>
+                  <line x1={PAD.left} y1={py(v)} x2={PAD.left + cW} y2={py(v)}
+                    stroke="var(--chart-grid,#e5e7eb)" strokeWidth={0.5} strokeOpacity={0.6} />
+                  <text x={PAD.left - 5} y={py(v) + 4} textAnchor="end" fontSize={9}
+                    fill="var(--text-muted,#9ca3af)">{fmtK(v)}</text>
+                </g>
+              ))}
+
+              {/* P3 dashed line (red) */}
+              <line x1={PAD.left} y1={py(p3Line)} x2={PAD.left + cW} y2={py(p3Line)}
+                stroke={C.red} strokeWidth={1} strokeDasharray="4 3" strokeOpacity={0.7} />
+              <text x={PAD.left + cW + 5} y={py(p3Line) + 4} fontSize={9} fill={C.red}>P3</text>
+
+              {/* P1 meta dashed line (green) */}
+              <line x1={PAD.left} y1={py(p1Line)} x2={PAD.left + cW} y2={py(p1Line)}
+                stroke={C.green} strokeWidth={1.5} strokeDasharray="5 3" strokeOpacity={0.85} />
+              <text x={PAD.left + cW + 5} y={py(p1Line) + 4} fontSize={9} fill={C.green}>P1</text>
+
+              {/* Green filled area below líquida line */}
+              <polygon points={greenPoly} fill={C.green} fillOpacity={0.10} />
+
+              {/* Red deduction area between bruto and líquida */}
+              <polygon points={redPoly} fill={C.red} fillOpacity={0.14} />
+
+              {/* Bruto line (dashed blue) */}
+              <polyline points={brutoPolyline} fill="none" stroke={C.blue}
+                strokeWidth={1.5} strokeDasharray="5 3" opacity={0.85} />
+
+              {/* Líquida line (solid green) */}
+              <polyline points={liqPolyline} fill="none" stroke={C.green}
+                strokeWidth={2.5} opacity={0.95} />
+
+              {/* "perda R$Xk" floating label in the gap at last point */}
+              {lastD && lastD.gross > lastD.net && (
+                <text x={lossLabelX} y={lossLabelY + 4} textAnchor="middle" fontSize={9}
+                  fill={C.red} fontWeight={600}>
+                  perda {fmtK(lastD.gross - lastD.net)}
+                </text>
+              )}
+
+              {/* Data dots: hollow for last (partial), filled for others */}
+              {netSeries.map((d, i) => {
+                const isLast = i === numP - 1;
+                return (
+                  <g key={i}>
+                    <circle cx={px(i)} cy={py(d.gross)} r={isLast ? 4 : 2.5}
+                      fill={isLast ? 'var(--panel-bg,#fff)' : C.blue}
+                      stroke={C.blue} strokeWidth={isLast ? 2 : 0} opacity={0.85} />
+                    <circle cx={px(i)} cy={py(d.net)} r={isLast ? 4 : 2.5}
+                      fill={isLast ? 'var(--panel-bg,#fff)' : C.green}
+                      stroke={C.green} strokeWidth={isLast ? 2 : 0} opacity={0.95} />
+                    {isLast && (
+                      <text x={px(i)} y={py(d.net) - 9} textAnchor="middle" fontSize={7.5}
+                        fill={C.green} fontStyle="italic" opacity={0.85}>em andamento</text>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* X-axis labels */}
+              {netSeries.map((d, i) => (
+                <text key={i} x={px(i)} y={H - 5} textAnchor="middle" fontSize={9}
+                  fill="var(--text-muted,#9ca3af)">{d.label}</text>
+              ))}
+            </svg>
+          </ChartCard>
+        );
+      })()}
 
       {/* KPI 11 — Margin */}
       <ChartCard title="Margem Líquida Total (%)" kpiValue={fmtPct(curMargin)} priority={marginPriority(curMargin)} subtitle="Lucro Líquido ÷ Receita Líquida. Meta > 20%." note="Verde = acima da meta. Vermelho = abaixo.">
@@ -251,7 +443,8 @@ export function FinanceiroModule({ financeWeeks, filtered, kpis, showTargets, pl
             <YAxis tick={TK} unit="%" />
             <Tooltip {...TS} formatter={(v: any) => [`${v}%`, 'Margem']} />
             <Area type="monotone" dataKey="value" stroke={C.green} strokeWidth={2} fill="url(#mGrad)" animationDuration={300} />
-            <ReferenceLine y={20} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: 'P1 20%', fill: C.green, fontSize: 10 }} />
+            <ReferenceLine y={THRESHOLDS.margin.p1} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `P1 ${THRESHOLDS.margin.p1}%`, fill: C.green, fontSize: 10 }} />
+            <ReferenceLine y={THRESHOLDS.margin.p3} stroke={C.red}   strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `P3 ${THRESHOLDS.margin.p3}%`, fill: C.red,   fontSize: 10 }} />
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -266,7 +459,8 @@ export function FinanceiroModule({ financeWeeks, filtered, kpis, showTargets, pl
             <Tooltip {...TS} formatter={(v: any, n: any) => [fmtK(v), n === 'ticket' ? 'Ticket do profissional' : 'Média da clínica']} />
             <Bar dataKey="ticket" name="ticket" fill={C.amber} radius={[0,4,4,0]} animationDuration={300} />
             <Bar dataKey="mediaClinica" name="mediaClinica" fill={C.gray} fillOpacity={0.4} radius={[0,4,4,0]} animationDuration={300} />
-            <ReferenceLine x={kpis.avgTicket} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Média ${fmtK(kpis.avgTicket)}`, fill: C.green, fontSize: 10 }} />
+            <ReferenceLine x={kpis.avgTicket} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `P1 ${fmtK(kpis.avgTicket)}`, fill: C.green, fontSize: 10 }} />
+            <ReferenceLine x={Math.round(kpis.avgTicket * (1 - THRESHOLDS.ticket.p2))} stroke={C.red} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `P3 ${fmtK(Math.round(kpis.avgTicket * (1 - THRESHOLDS.ticket.p2)))}`, fill: C.red, fontSize: 10 }} />
           </ComposedChart>
         </ResponsiveContainer>
       </ChartCard>

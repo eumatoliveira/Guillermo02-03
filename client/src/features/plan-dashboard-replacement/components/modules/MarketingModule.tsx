@@ -90,10 +90,10 @@ const CHANNEL_ROI: Record<string,number> = { Whatsapp: 485, Facebook: 390, 'Indi
 
 // ─── Thresholds configuráveis via setup da clínica ───────────────────────────
 const THRESHOLDS = {
-  leads:  { dropP2: 0.20, dropP3: 0.20 }, // queda vs período anterior: P2 < 20%, P3 >= 20%
-  cpl:    { riseP2: 0.20, riseP3: 0.20 }, // aumento vs período anterior: P2 < 20%, P3 >= 20%
-  conv:   { p1: 35, p3: 20 },             // % conversão Lead → Agendamento
-  roi:    { p1: 200, p2: 100 },           // % ROI por canal
+  leads: { dropP2: 0.20 },      // P1 = estável/crescendo | P2 = queda <20% | P3 = queda ≥20%
+  cpl:   { riseP2: 0.20 },      // P1 = estável/caindo   | P2 = aumento <20% | P3 = aumento ≥20%
+  conv:  { p1: 35, p2: 20 },    // P1 ≥35% | P2 20–35% | P3 <20%
+  roi:   { p1: 200, p2: 100 },  // P1 ≥200% | P2 100–200% | P3 <100%
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -167,24 +167,22 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
   const lineData = [{ cac: 0, ltv3x: 0 }, { cac: 250, ltv3x: 750 }];
 
   // ── Priority helpers (wired to THRESHOLDS) ──────────────────────────────────
-  // Leads: compare total leads in recent half vs prior half of selected period
-  const splitIdx = Math.max(1, Math.floor(leadsPerPeriod.length / 2));
+  // Leads: compara metade recente vs metade anterior do período selecionado
+  const splitIdx    = Math.max(1, Math.floor(leadsPerPeriod.length / 2));
   const recentLeads = leadsPerPeriod.slice(-splitIdx).reduce((s, w) => s + (w.Total as number || 0), 0);
   const priorLeads  = leadsPerPeriod.slice(0, splitIdx).reduce((s, w) => s + (w.Total as number || 0), 0);
   const leadsDrop   = priorLeads > 0 ? (priorLeads - recentLeads) / priorLeads : 0;
   const leadsPriority: 'P1'|'P2'|'P3' =
-    leadsDrop <= 0 ? 'P1'
-    : leadsDrop < THRESHOLDS.leads.dropP3 ? 'P2' : 'P3';
+    leadsDrop <= 0 ? 'P1' : leadsDrop < THRESHOLDS.leads.dropP2 ? 'P2' : 'P3';
 
-  // CPL: compare recent period avg CPL vs prior (derived from cplData with ±noise)
-  const prevAvgCPL = Math.round(cplData.reduce((s, d) => s + d.cpl, 0) / cplData.length * 0.95);
-  const cplChange  = prevAvgCPL > 0 ? (avgCPL - prevAvgCPL) / prevAvgCPL : 0;
-  const cplPriority = (_v: number): 'P1'|'P2'|'P3' =>
-    cplChange <= 0 ? 'P1'
-    : cplChange < THRESHOLDS.cpl.riseP3 ? 'P2' : 'P3';
+  // CPL: compara avgCPL atual vs baseline dos canais (CHANNEL_CPL = referência do período anterior)
+  const baselineCPL = Math.round(CHANNELS.reduce((s, ch) => s + CHANNEL_CPL[ch], 0) / CHANNELS.length);
+  const cplChange   = baselineCPL > 0 ? (avgCPL - baselineCPL) / baselineCPL : 0;
+  const cplPriority = (): 'P1'|'P2'|'P3' =>
+    cplChange <= 0 ? 'P1' : cplChange < THRESHOLDS.cpl.riseP2 ? 'P2' : 'P3';
 
   const convPriority = (v: number): 'P1'|'P2'|'P3' =>
-    v >= THRESHOLDS.conv.p1 ? 'P1' : v >= THRESHOLDS.conv.p3 ? 'P2' : 'P3';
+    v >= THRESHOLDS.conv.p1 ? 'P1' : v >= THRESHOLDS.conv.p2 ? 'P2' : 'P3';
 
   const roiPriority = (v: number): 'P1'|'P2'|'P3' =>
     v >= THRESHOLDS.roi.p1 ? 'P1' : v >= THRESHOLDS.roi.p2 ? 'P2' : 'P3';
@@ -192,8 +190,7 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
 
   return (
     <div className="chart-grid">
-      {/* KPI 19 — Leads by channel per period (full width) */}
-      {/* KPI 19 — Leads by channel: donut + ranked bars */}
+      {/* KPI 19 — Leads por canal: donut + ranked bars */}
       {(() => {
         const totals = CHANNELS.map(ch => ({
           name: ch,
@@ -205,7 +202,7 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
           <ChartCard title="Leads Gerados por Canal" kpiValue={`${kpis.leads}`} fullWidth
             priority={leadsPriority}
             subtitle="Distribuição de novos pacientes captados por canal de origem."
-            note="Verde = estável ou crescendo | Amarelo = queda < 20% | Vermelho = queda ≥ 20% vs período anterior">
+            note={`Verde = estável/crescendo | Amarelo = queda <${THRESHOLDS.leads.dropP2 * 100}% | Vermelho = queda ≥${THRESHOLDS.leads.dropP2 * 100}% vs período anterior`}>
             <div style={{ display:'flex', gap:24, alignItems:'center', height:200 }}>
               {/* Donut */}
               <div style={{ flex:'0 0 200px', position:'relative' }}>
@@ -247,7 +244,7 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
 
       {/* KPI 20 — CPL by channel */}
       <ChartCard title="Custo por Lead (CPL)" kpiValue={fmtK(avgCPL)}
-        priority={cplPriority(avgCPL)}
+        priority={cplPriority()}
         subtitle="Quanto custa captar cada lead potencial por canal."
         note="Verde = estável ou caindo | Amarelo = aumento < 20% | Vermelho = aumento ≥ 20% vs período anterior">
         <ResponsiveContainer width="100%" height={220}>
@@ -256,10 +253,13 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
             <XAxis type="number" tick={TK} tickFormatter={v => `R$${v}`} />
             <YAxis type="category" dataKey="name" tick={{ fill:'var(--text-primary)', fontSize:11 }} width={60} />
             <Tooltip {...TS} formatter={(v: any) => [`R$ ${v}`, 'CPL']} />
-            {showTargets && <ReferenceLine x={35} stroke={C.gray} strokeDasharray="4 4" label={{ value:'Meta R$35', fill:C.gray, fontSize:10, position:'top' }} />}
+            <ReferenceLine x={baselineCPL} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5}
+              label={{ value:`P1 R$${baselineCPL}`, fill:C.green, fontSize:10, position:'top' }} />
+            <ReferenceLine x={Math.round(baselineCPL * (1 + THRESHOLDS.cpl.riseP2))} stroke={C.red} strokeDasharray="4 4" strokeWidth={1.5}
+              label={{ value:`P3 R$${Math.round(baselineCPL * (1 + THRESHOLDS.cpl.riseP2))}`, fill:C.red, fontSize:10, position:'top' }} />
             <Bar dataKey="cpl" animationDuration={300} radius={[0,4,4,0]}
               label={{ position:'right', formatter:(v:any) => `R$${v}`, fill:'var(--text-muted)', fontSize:10 }}>
-              {cplData.map((entry, i) => <Cell key={i} fill={entry.cpl <= avgCPL ? C.green : entry.cpl <= avgCPL * (1 + THRESHOLDS.cpl.riseP3) ? C.amber : C.red} />)}
+              {cplData.map((entry, i) => <Cell key={i} fill={entry.cpl <= baselineCPL ? C.green : entry.cpl <= baselineCPL * (1 + THRESHOLDS.cpl.riseP2) ? C.amber : C.red} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -273,17 +273,20 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
         kpiValue={fmtPct(avgConv)}
         priority={convPriority(avgConv)}
         subtitle="% de leads que viraram agendamentos por canal."
-        note="Verde > 35% | Amarelo 20-35% | Vermelho < 20%">
+        note={`Verde ≥ ${THRESHOLDS.conv.p1}% | Amarelo ${THRESHOLDS.conv.p2}–${THRESHOLDS.conv.p1}% | Vermelho < ${THRESHOLDS.conv.p2}%`}>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={conversionData} layout="vertical" margin={{ top:5, right:50, left:65, bottom:0 }}>
             <CartesianGrid {...GR} />
             <XAxis type="number" tick={TK} unit="%" domain={[0,80]} />
             <YAxis type="category" dataKey="name" tick={{ fill:'var(--text-primary)', fontSize:11 }} width={65} />
             <Tooltip {...TS} formatter={(v: any) => [`${v}%`, 'Conversão']} />
-            {showTargets && <ReferenceLine x={35} stroke={C.gray} strokeDasharray="4 4" label={{ value:'Meta 35%', fill:C.gray, fontSize:10 }} />}
+            <ReferenceLine x={THRESHOLDS.conv.p1} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5}
+              label={{ value:`P1 ${THRESHOLDS.conv.p1}%`, fill:C.green, fontSize:10 }} />
+            <ReferenceLine x={THRESHOLDS.conv.p2} stroke={C.red} strokeDasharray="4 4" strokeWidth={1.5}
+              label={{ value:`P3 ${THRESHOLDS.conv.p2}%`, fill:C.red, fontSize:10 }} />
             <Bar dataKey="conversion" animationDuration={300} radius={[0,4,4,0]}
               label={{ position:'right', formatter:(v:any)=>`${v}%`, fill:'var(--text-muted)', fontSize:10 }}>
-              {conversionData.map((entry, i) => <Cell key={i} fill={entry.conversion >= 35 ? C.green : entry.conversion >= 25 ? C.amber : C.red} />)}
+              {conversionData.map((entry, i) => <Cell key={i} fill={entry.conversion >= THRESHOLDS.conv.p1 ? C.green : entry.conversion >= THRESHOLDS.conv.p2 ? C.amber : C.red} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -310,7 +313,7 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
             kpiValue={fmtPct(avgL2C)}
             priority={convPriority(avgL2C)}
             subtitle="% de leads que resultaram em consulta realizada, por canal."
-            note="Verde > 35% | Amarelo 20-35% | Vermelho < 20%">
+            note={`Verde ≥ ${THRESHOLDS.conv.p1}% | Amarelo ${THRESHOLDS.conv.p2}–${THRESHOLDS.conv.p1}% | Vermelho < ${THRESHOLDS.conv.p2}%`}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={convL2CByChannel} layout="vertical" margin={{ top:5, right:50, left:70, bottom:0 }}>
                 <CartesianGrid {...GR} />
@@ -319,12 +322,12 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
                 <Tooltip {...TS} formatter={(v: any) => [`${v}%`, 'Conv. L→C']} />
                 <ReferenceLine x={THRESHOLDS.conv.p1} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5}
                   label={{ value:`Meta ${THRESHOLDS.conv.p1}%`, fill:C.green, fontSize:10 }} />
-                <ReferenceLine x={THRESHOLDS.conv.p3} stroke={C.red} strokeDasharray="4 4" strokeWidth={1}
-                  label={{ value:`P3 ${THRESHOLDS.conv.p3}%`, fill:C.red, fontSize:10 }} />
+                <ReferenceLine x={THRESHOLDS.conv.p2} stroke={C.red} strokeDasharray="4 4" strokeWidth={1}
+                  label={{ value:`P3 <${THRESHOLDS.conv.p2}%`, fill:C.red, fontSize:10 }} />
                 <Bar dataKey="conv" animationDuration={300} radius={[0,4,4,0]}
                   label={{ position:'right', formatter:(v:any)=>`${v}%`, fill:'var(--text-muted)', fontSize:10 }}>
                   {convL2CByChannel.map((entry, i) => (
-                    <Cell key={i} fill={entry.conv >= THRESHOLDS.conv.p1 ? C.green : entry.conv >= THRESHOLDS.conv.p3 ? C.amber : C.red} />
+                    <Cell key={i} fill={entry.conv >= THRESHOLDS.conv.p1 ? C.green : entry.conv >= THRESHOLDS.conv.p2 ? C.amber : C.red} />
                   ))}
                 </Bar>
               </BarChart>
@@ -363,7 +366,10 @@ export function MarketingModule({ weeklyData, filtered, kpis, showTargets, plan 
             <XAxis dataKey="name" tick={TK} />
             <YAxis tick={TK} unit="%" />
             <Tooltip {...TS} formatter={(v:any) => [`${v}%`, 'ROI']} />
-            {showTargets && <ReferenceLine y={200} stroke={C.gray} strokeDasharray="4 4" label={{ value:'Meta 200%', fill:C.gray, fontSize:10 }} />}
+            <ReferenceLine y={THRESHOLDS.roi.p1} stroke={C.green} strokeDasharray="4 4" strokeWidth={1.5}
+              label={{ value:`P1 ${THRESHOLDS.roi.p1}%`, fill:C.green, fontSize:10, position:'insideTopRight' }} />
+            <ReferenceLine y={THRESHOLDS.roi.p2} stroke={C.red} strokeDasharray="4 4" strokeWidth={1.5}
+              label={{ value:`P3 ${THRESHOLDS.roi.p2}%`, fill:C.red, fontSize:10, position:'insideTopRight' }} />
             <Bar dataKey="roi" animationDuration={300} radius={[4,4,0,0]}
               label={{ position:'top', formatter:(v:any)=>`${v}%`, fill:'var(--text-muted)', fontSize:10 }}>
               {roiData.map((entry, i) => <Cell key={i} fill={entry.color} />)}

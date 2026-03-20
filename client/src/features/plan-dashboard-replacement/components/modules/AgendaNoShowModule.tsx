@@ -138,31 +138,7 @@ export function AgendaNoShowModule({ agendaWeeks, filtered, kpis, showTargets, p
     value: +w.noShowRate.toFixed(1), // proxy for capacity loss
   }));
 
-  // KPI 7 — Lead time histogram
-  const leadTimeBuckets = useMemo(() => {
-    const buckets = [
-      { range: '0–2d', count: 0 },
-      { range: '3–5d', count: 0 },
-      { range: '6–8d', count: 0 },
-      { range: '9–12d', count: 0 },
-      { range: '13–17d', count: 0 },
-      { range: '18–22d', count: 0 },
-    ];
-    filtered.forEach(a => {
-      if (!a.confirmedAt) return;
-      const days = Math.abs(
-        (new Date(a.scheduledAt).getTime() - new Date(a.firstContactAt).getTime()) / 86_400_000,
-      );
-      if (days <= 2) buckets[0].count++;
-      else if (days <= 5) buckets[1].count++;
-      else if (days <= 8) buckets[2].count++;
-      else if (days <= 12) buckets[3].count++;
-      else if (days <= 17) buckets[4].count++;
-      else buckets[5].count++;
-    });
-    const max = Math.max(...buckets.map(b => b.count), 1);
-    return buckets.map(b => ({ ...b, opacity: 0.3 + (b.count / max) * 0.7 }));
-  }, [filtered]);
+  // KPI 7 — Lead time bullet chart (valor direto de kpis.leadTimeDays)
 
   // KPI 8 — Appointments by channel (full width)
   const channelNames = Object.keys(C.channels);
@@ -383,28 +359,60 @@ export function AgendaNoShowModule({ agendaWeeks, filtered, kpis, showTargets, p
         </ResponsiveContainer>
       </ChartCard>}
 
-      {/* KPI 7 — Lead time histogram */}
+      {/* KPI 7 — Lead time bullet chart */}
       <ChartCard
         title="Lead Time do Agendamento (dias)"
         priority={leadTimePriority(kpis.leadTimeDays) as any}
         kpiValue={`${kpis.leadTimeDays.toFixed(1)}d`}
         subtitle="Tempo médio entre o contato e a consulta agendada"
-        note="Verde < 3d | Amarelo 3-7d | Vermelho > 7d"
+        note="Verde < 3d | Amarelo 3–7d | Vermelho > 7d"
       >
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={leadTimeBuckets} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid {...GRID_STYLE} />
-            <XAxis dataKey="range" tick={TICK_STYLE} />
-            <YAxis tick={TICK_STYLE} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [v, 'Agendamentos']} />
-            <Bar dataKey="count" name="Agendamentos" animationDuration={300} radius={[4, 4, 0, 0]}>
-              {leadTimeBuckets.map((entry, i) => {
-                const zoneColor = i === 0 ? C.green : i <= 2 ? C.amber : C.red;
-                return <Cell key={i} fill={zoneColor} fillOpacity={entry.opacity} />;
-              })}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        {(() => {
+          const MAX = 15;
+          const val  = kpis.leadTimeDays;
+          const pct  = Math.min(100, (val / MAX) * 100);
+          const color = val < 3 ? C.green : val <= 7 ? C.amber : C.red;
+          const labelLeft = Math.max(3, Math.min(93, pct));
+          return (
+            <div style={{ padding: '32px 4px 4px', position: 'relative' }}>
+              {/* Value label above marker */}
+              <div style={{
+                position: 'absolute', top: 8,
+                left: `${labelLeft}%`, transform: 'translateX(-50%)',
+                fontSize: 12, fontWeight: 700, color, whiteSpace: 'nowrap', userSelect: 'none',
+              }}>
+                {val.toFixed(1)}d
+              </div>
+
+              {/* Bullet track */}
+              <div style={{ position: 'relative', height: 32, borderRadius: 8 }}>
+                {/* Colored zones */}
+                <div style={{ display: 'flex', height: '100%', borderRadius: 8, overflow: 'hidden' }}>
+                  <div style={{ width: `${(3/MAX)*100}%`,  background: 'rgba(29,158,117,0.22)' }} />
+                  <div style={{ width: `${(4/MAX)*100}%`,  background: 'rgba(239,159,39,0.22)'  }} />
+                  <div style={{ flex: 1,                   background: 'rgba(226,75,74,0.18)'   }} />
+                </div>
+                {/* Zone dividers */}
+                <div style={{ position:'absolute', top:0, bottom:0, left:`${(3/MAX)*100}%`, width:1.5, background:'rgba(29,158,117,0.4)',  pointerEvents:'none' }} />
+                <div style={{ position:'absolute', top:0, bottom:0, left:`${(7/MAX)*100}%`, width:1.5, background:'rgba(239,159,39,0.4)', pointerEvents:'none' }} />
+                {/* Marker */}
+                <div style={{
+                  position: 'absolute', top: -6, bottom: -6,
+                  left: `${pct}%`, transform: 'translateX(-50%)',
+                  width: 3, borderRadius: 2, background: color,
+                  boxShadow: `0 0 6px ${color}70`,
+                }} />
+              </div>
+
+              {/* Scale labels */}
+              <div style={{ position: 'relative', height: 18, marginTop: 8 }}>
+                {[{ pos: 0, label: '0d', c: 'var(--text-muted)' }, { pos: (3/MAX)*100, label: '3d', c: C.green }, { pos: (7/MAX)*100, label: '7d', c: C.amber }, { pos: 100, label: '15d', c: 'var(--text-muted)' }].map(({ pos, label, c }) => (
+                  <span key={label} style={{ position:'absolute', left:`${pos}%`, transform:'translateX(-50%)', fontSize:9, color:c, whiteSpace:'nowrap' }}>{label}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </ChartCard>
 
       {/* KPI 8 — Appointments by channel: donut + ranked bars */}
