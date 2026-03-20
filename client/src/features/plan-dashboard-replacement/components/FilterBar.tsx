@@ -28,6 +28,7 @@ const defaultOptions: FilterOptions = {
 
 export default function FilterBar({ filters, onChange, showUnit = false, options = defaultOptions }: FilterBarProps) {
   const { t } = useTranslation();
+  const activeFilterCount = [filters.channel, filters.professional, filters.procedure, filters.status, filters.unit, filters.severity].filter(Boolean).length;
   const orderedChannelOptions = [
     { value: "Indicacao", label: t("Indicação") },
     { value: "Google", label: "Google" },
@@ -58,6 +59,11 @@ export default function FilterBar({ filters, onChange, showUnit = false, options
     <div className="filter-bar">
       <div className="filter-bar-title">
         <span>{t('Filtros')}</span>
+        {activeFilterCount > 0 && (
+          <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginLeft: 6 }}>
+            {activeFilterCount} filtro{activeFilterCount > 1 ? 's' : ''}
+          </span>
+        )}
         <span className="filter-info-wrap">
           <button type="button" className="filter-info-btn" aria-label={t('Sobre filtros')}>i</button>
           <span className="filter-info-popover" role="tooltip">

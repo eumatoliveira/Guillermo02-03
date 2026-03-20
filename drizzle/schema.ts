@@ -21,7 +21,7 @@ export const users = mysqlTable("users", {
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   /** Subscription plan: essencial, pro, enterprise */
   plan: mysqlEnum("plan", ["essencial", "pro", "enterprise"]).default("essencial").notNull(),
-  preferredCurrency: mysqlEnum("preferredCurrency", ["BRL", "USD", "ARS", "CLP", "COP", "MXN", "PEN", "UYU"]).default("BRL").notNull(),
+  preferredCurrency: mysqlEnum("preferredCurrency", ["BRL", "USD", "EUR", "ARS", "CLP", "COP", "MXN", "PEN", "UYU"]).default("BRL").notNull(),
   mfaEnabled: boolean("mfaEnabled").default(false).notNull(),
   /** Whether the account is active */
   isActive: boolean("isActive").default(true).notNull(),
