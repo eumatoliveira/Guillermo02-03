@@ -503,6 +503,12 @@ export function SupportChatWidget({ theme: _theme, appointments, filters, active
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const abortClaudeRef = useRef<(() => void) | null>(null);
 
+  // Resize state
+  const [chatWidth, setChatWidth] = useState(620);
+  const [chatHeight, setChatHeight] = useState(560);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef<{ x: number; y: number; w: number; h: number; dir: string } | null>(null);
+
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [webSearchOn, setWebSearchOn] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -804,6 +810,36 @@ Responda sempre com base no contexto do projeto, seja objetivo e prático.`;
   const isNewConversation =
     activeConversation?.messages.length === 1 && activeConversation.messages[0].role === 'assistant';
 
+  const startResize = (e: React.MouseEvent, dir: 'left' | 'top' | 'corner') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStartRef.current = { x: e.clientX, y: e.clientY, w: chatWidth, h: chatHeight, dir };
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeStartRef.current) return;
+      const { x, y, w, h, dir } = resizeStartRef.current;
+      if (dir === 'left' || dir === 'corner') {
+        const newW = Math.max(360, Math.min(window.innerWidth - 40, w - (ev.clientX - x)));
+        setChatWidth(newW);
+      }
+      if (dir === 'top' || dir === 'corner') {
+        const newH = Math.max(400, Math.min(window.innerHeight - 80, h - (ev.clientY - y)));
+        setChatHeight(newH);
+      }
+    };
+
+    const onUp = () => {
+      resizeStartRef.current = null;
+      setIsResizing(false);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
   const widget = (
     <div
       onClick={() => plusMenuOpen && setPlusMenuOpen(false)}
@@ -821,8 +857,8 @@ Responda sempre com base no contexto do projeto, seja objetivo e prático.`;
       {isOpen ? (
         <div
           style={{
-            width: sidebarOpen ? 620 : 400,
-            height: 560,
+            width: chatWidth,
+            height: chatHeight,
             borderRadius: 20,
             overflow: 'hidden',
             position: 'relative',
@@ -830,9 +866,63 @@ Responda sempre com base no contexto do projeto, seja objetivo e prático.`;
             background: DARK.main,
             boxShadow: DARK.shadow,
             border: `1px solid ${DARK.border}`,
-            transition: 'width 220ms ease',
+            transition: isResizing ? 'none' : 'width 220ms ease',
+            userSelect: isResizing ? 'none' : 'auto',
           }}
         >
+          {/* ── RESIZE HANDLES ── */}
+          {/* Top edge */}
+          <div
+            onMouseDown={(e) => startResize(e, 'top')}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 14,
+              right: 14,
+              height: 6,
+              cursor: 'ns-resize',
+              zIndex: 20,
+            }}
+          />
+          {/* Left edge */}
+          <div
+            onMouseDown={(e) => startResize(e, 'left')}
+            style={{
+              position: 'absolute',
+              top: 14,
+              left: 0,
+              bottom: 14,
+              width: 6,
+              cursor: 'ew-resize',
+              zIndex: 20,
+            }}
+          />
+          {/* Top-left corner */}
+          <div
+            onMouseDown={(e) => startResize(e, 'corner')}
+            title="Arrastar para redimensionar"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: 18,
+              height: 18,
+              cursor: 'nw-resize',
+              zIndex: 21,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+              <circle cx="1.5" cy="1.5" r="1.2" fill="#4b5563" />
+              <circle cx="4.5" cy="1.5" r="1.2" fill="#4b5563" />
+              <circle cx="1.5" cy="4.5" r="1.2" fill="#4b5563" />
+              <circle cx="4.5" cy="4.5" r="1.2" fill="#4b5563" />
+              <circle cx="7.5" cy="1.5" r="1.2" fill="#4b5563" />
+              <circle cx="1.5" cy="7.5" r="1.2" fill="#4b5563" />
+            </svg>
+          </div>
           {/* ── SIDEBAR ── */}
           {sidebarOpen ? (
             <div
