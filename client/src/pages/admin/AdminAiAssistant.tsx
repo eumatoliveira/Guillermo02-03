@@ -13,6 +13,43 @@ import { toast } from "sonner";
 const STORAGE_KEY_CLAUDE = "glx_anthropic_key";
 const STORAGE_KEY_OPENAI = "glx_openai_key";
 
+// ── Crypto helpers (AES-GCM + PBKDF2) ────────────────────────────────────────
+const _ENC_PREFIX = 'glx_enc::';
+const _PBKDF2_SALT = new TextEncoder().encode('glx-insights-salt-2026');
+const _PBKDF2_PASS = 'glx-dashboard-secure-key-v1';
+
+async function _deriveKey(usage: 'encrypt' | 'decrypt'): Promise<CryptoKey> {
+  const raw = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(_PBKDF2_PASS), 'PBKDF2', false, ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: _PBKDF2_SALT, iterations: 12000, hash: 'SHA-256' },
+    raw, { name: 'AES-GCM', length: 256 }, false, [usage],
+  );
+}
+
+async function _encryptKey(plain: string): Promise<string> {
+  const key = await _deriveKey('encrypt');
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plain));
+  const buf = new Uint8Array(12 + enc.byteLength);
+  buf.set(iv);
+  buf.set(new Uint8Array(enc), 12);
+  return _ENC_PREFIX + btoa(Array.from(buf, b => String.fromCharCode(b)).join(''));
+}
+
+async function _decryptKey(stored: string): Promise<string> {
+  if (!stored.startsWith(_ENC_PREFIX)) return stored; // legacy plain fallback
+  try {
+    const buf = Uint8Array.from(atob(stored.slice(_ENC_PREFIX.length)), c => c.charCodeAt(0));
+    const key = await _deriveKey('decrypt');
+    const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+    return new TextDecoder().decode(dec);
+  } catch {
+    return '';
+  }
+}
+
 type ProviderCardProps = {
   title: string;
   description: string;
@@ -41,8 +78,12 @@ function ProviderCard({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(storageKey) ?? "";
-    setValue(stored);
-    setSavedValue(stored);
+    if (!stored) return;
+    // Decrypt before displaying — never show the raw (possibly encrypted) blob
+    _decryptKey(stored).then((plain) => {
+      setValue(plain);
+      setSavedValue(plain);
+    });
   }, [storageKey]);
 
   const hasSavedValue = savedValue.trim().length > 0;
@@ -53,7 +94,7 @@ function ProviderCard({
     return `${savedValue.slice(0, 6)}••••••${savedValue.slice(-4)}`;
   }, [savedValue]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const next = value.trim();
     if (!next) {
       window.localStorage.removeItem(storageKey);
@@ -63,8 +104,10 @@ function ProviderCard({
       return;
     }
 
-    window.localStorage.setItem(storageKey, next);
-    setSavedValue(next);
+    // Encrypt before persisting so the raw key never sits in plain text
+    const encrypted = await _encryptKey(next);
+    window.localStorage.setItem(storageKey, encrypted);
+    setSavedValue(next); // keep plaintext in state for display/masking
     setValue(next);
     toast.success(`${title} salva no navegador.`);
   };

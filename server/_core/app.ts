@@ -201,12 +201,18 @@ function registerAppRoutes(app: Express) {
     maxRequests: 5,
     keyPrefix: "contact",
   });
+  const oauthLimiter = createRateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: process.env.NODE_ENV === "development" ? 100 : 30,
+    keyPrefix: "oauth",
+  });
 
   // Apply rate limiters to sensitive paths
   app.use("/api/trpc/emailAuth.login", authLimiter);
   app.use("/api/trpc/emailAuth.register", authLimiter);
   app.use("/api/trpc/emailAuth.recoverPassword", authLimiter);
   app.use("/api/contact", contactLimiter);
+  app.use("/api/oauth", oauthLimiter);
   app.use("/api/trpc", apiLimiter);
 
   registerSiteRoutes(app);

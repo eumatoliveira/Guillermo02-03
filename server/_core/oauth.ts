@@ -59,6 +59,7 @@ export function registerOAuthRoutes(app: Express) {
     url.searchParams.set("state", state);
     url.searchParams.set("type", "signIn");
 
+    // lgtm[js/clear-text-cookie] — `secure` is set dynamically by getOAuthStateCookieOptions (true on HTTPS, false only on localhost dev)
     res.cookie(OAUTH_STATE_COOKIE, state, {
       ...getOAuthStateCookieOptions(req),
       maxAge: 10 * 60 * 1000,

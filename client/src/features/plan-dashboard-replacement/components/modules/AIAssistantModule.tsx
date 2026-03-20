@@ -28,6 +28,40 @@ const STORAGE_KEY_FACTS  = 'glx_ai_facts_v2';
 const STORAGE_KEY_CHAT   = 'glx_ai_chat_v2';
 const STORAGE_KEY_APIKEY = 'glx_anthropic_key';
 
+// ── Crypto helpers (AES-GCM + PBKDF2) ────────────────────────────────────────
+const _ENC_PREFIX = 'glx_enc::';
+const _PBKDF2_SALT = new TextEncoder().encode('glx-insights-salt-2026');
+const _PBKDF2_PASS = 'glx-dashboard-secure-key-v1';
+
+async function _deriveKey(usage: 'encrypt' | 'decrypt'): Promise<CryptoKey> {
+  const raw = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(_PBKDF2_PASS), 'PBKDF2', false, ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: _PBKDF2_SALT, iterations: 12000, hash: 'SHA-256' },
+    raw, { name: 'AES-GCM', length: 256 }, false, [usage],
+  );
+}
+
+async function _decryptApiKey(stored: string): Promise<string> {
+  if (!stored.startsWith(_ENC_PREFIX)) return stored; // legacy plain fallback
+  try {
+    const buf = Uint8Array.from(atob(stored.slice(_ENC_PREFIX.length)), c => c.charCodeAt(0));
+    const key = await _deriveKey('decrypt');
+    const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+    return new TextDecoder().decode(dec);
+  } catch {
+    return '';
+  }
+
+}
+
+async function _loadDecryptedApiKey(): Promise<string> {
+  const stored = localStorage.getItem(STORAGE_KEY_APIKEY) ?? '';
+  if (!stored) return '';
+  return _decryptApiKey(stored);
+}
+
 const PURPLE       = '#F97316';
 const PURPLE_MID   = '#111111';
 const PURPLE_LIGHT = '#FFF1E8';
@@ -219,7 +253,8 @@ function GLXIcon() {
 
 export function AIAssistantModule({ kpis, fmt }: Props) {
   const [isOpen, setIsOpen]       = useState(false);
-  const [apiKey, setApiKey]       = useState<string>(() => localStorage.getItem(STORAGE_KEY_APIKEY) ?? '');
+  // Start empty; decrypted key loaded async in useEffect below
+  const [apiKey, setApiKey]       = useState<string>('');
   const [messages, setMessages]   = useState<Message[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_CHAT) || '[]')
@@ -243,9 +278,12 @@ export function AIAssistantModule({ kpis, fmt }: Props) {
   const inputRef  = useRef<HTMLInputElement>(null);
   const abortRef  = useRef<AbortController | null>(null);
 
+  // Load decrypted API key on mount
+  useEffect(() => { _loadDecryptedApiKey().then(setApiKey); }, []);
+
   useEffect(() => {
     if (isOpen) {
-      setApiKey(localStorage.getItem(STORAGE_KEY_APIKEY) ?? '');
+      _loadDecryptedApiKey().then(setApiKey);
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       setTimeout(() => inputRef.current?.focus(), 100);
     }
