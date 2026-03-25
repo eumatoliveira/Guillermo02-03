@@ -3,6 +3,7 @@ let appPromise: Promise<(req: any, res: any) => any> | null = null;
 async function getApp() {
   if (!appPromise) {
     process.env.NODE_ENV = process.env.NODE_ENV || "production";
+    // @ts-ignore - vercel-app.js is generated during build
     appPromise = import("../dist/vercel-app.js").then((mod) => mod.createHttpApp());
   }
   return appPromise;

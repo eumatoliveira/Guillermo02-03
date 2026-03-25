@@ -122,3 +122,4 @@ tmp_*.txt
 # Codex extracted files
 .codex-pdf-extracts/
 
+.vercel
