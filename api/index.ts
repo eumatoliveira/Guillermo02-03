@@ -1,11 +1,9 @@
-import { createHttpApp } from "../server/_core/app";
+let appPromise: Promise<(req: any, res: any) => any> | null = null;
 
-let appPromise: ReturnType<typeof createHttpApp> | null = null;
-
-function getApp() {
+async function getApp() {
   if (!appPromise) {
     process.env.NODE_ENV = process.env.NODE_ENV || "production";
-    appPromise = createHttpApp();
+    appPromise = import("../dist/vercel-app.js").then((mod) => mod.createHttpApp());
   }
   return appPromise;
 }
