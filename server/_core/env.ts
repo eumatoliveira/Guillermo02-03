@@ -53,6 +53,10 @@ const parseBootstrapDemoUsers = (value: string | undefined) =>
     });
 
 const bootstrapTestClientName = process.env.BOOTSTRAP_TEST_CLIENT_NAME?.trim() || "Conta de Teste GLX";
+const defaultDevelopmentAdminUser = {
+  email: "admin@glx.local",
+  password: "Admin123!",
+};
 const defaultDevelopmentDemoUsers = [
   {
     email: "cliente@glx.local",
@@ -108,8 +112,12 @@ export const ENV = {
   asaasUserAgent: process.env.ASAAS_USER_AGENT?.trim() ?? "glx-control-tower/1.0",
   exchangeRateApiBaseUrl: process.env.EXCHANGE_RATE_API_BASE_URL?.trim() ?? "https://api.frankfurter.dev/v1/latest",
   exchangeRateCacheTtlMs: Number(process.env.EXCHANGE_RATE_CACHE_TTL_MS ?? 30 * 60 * 1000),
-  bootstrapAdminEmail: process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase() ?? "",
-  bootstrapAdminPassword: process.env.BOOTSTRAP_ADMIN_PASSWORD ?? "",
+  bootstrapAdminEmail:
+    process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase() ??
+    (isDevelopment ? defaultDevelopmentAdminUser.email : ""),
+  bootstrapAdminPassword:
+    process.env.BOOTSTRAP_ADMIN_PASSWORD ??
+    (isDevelopment ? defaultDevelopmentAdminUser.password : ""),
   bootstrapTestClientEmails: parseEmailList(process.env.BOOTSTRAP_TEST_CLIENT_EMAILS),
   bootstrapTestClientPassword: process.env.BOOTSTRAP_TEST_CLIENT_PASSWORD ?? "",
   bootstrapTestClientName,

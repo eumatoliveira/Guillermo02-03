@@ -173,14 +173,21 @@ Arquivo central: `shared/controlTowerRules.ts`
 Implementacao principal em `server/authRouter.ts`.
 
 ### Bootstrap de contas (via ambiente)
-As contas iniciais sao criadas somente com variaveis de ambiente:
+Em `development`, o projeto cria automaticamente estas contas locais:
+- `admin@glx.local` / `Admin123!`
+- `cliente@glx.local` / `Cliente123!`
+- `pro@glx.local` / `Pro123!`
+- `enterprise@glx.local` / `Enterprise123!`
+
+Em `production`, as contas iniciais sao criadas somente com variaveis de ambiente:
 - `BOOTSTRAP_ADMIN_EMAIL`
 - `BOOTSTRAP_ADMIN_PASSWORD`
+- `BOOTSTRAP_DEMO_USERS`
 - `BOOTSTRAP_TEST_CLIENT_EMAILS` (lista separada por virgula)
 - `BOOTSTRAP_TEST_CLIENT_PASSWORD`
 - `BOOTSTRAP_TEST_CLIENT_NAME`
 
-Se essas variaveis nao estiverem definidas, o bootstrap de usuarios e ignorado com log de aviso.
+Se essas variaveis nao estiverem definidas em `production`, o bootstrap de usuarios e ignorado com log de aviso.
 
 ### Sessao
 - Cookie HTTP-only (`GLX`), com `sameSite` dinamico (`lax` em HTTP, `none` em HTTPS).
@@ -224,6 +231,7 @@ cp .env.example .env
 | `DATABASE_URL` | Recomendado | Conexao MySQL para persistencia real |
 | `BOOTSTRAP_ADMIN_EMAIL` | Nao | Email do admin inicial |
 | `BOOTSTRAP_ADMIN_PASSWORD` | Nao | Senha do admin inicial |
+| `BOOTSTRAP_DEMO_USERS` | Nao | Usuarios demo no formato `email|senha|plano|nome` separados por `;` |
 | `BOOTSTRAP_TEST_CLIENT_EMAILS` | Nao | Emails de contas de teste (csv) |
 | `BOOTSTRAP_TEST_CLIENT_PASSWORD` | Nao | Senha unica para contas de teste |
 | `BOOTSTRAP_TEST_CLIENT_NAME` | Nao | Nome exibido para contas de teste |
@@ -243,6 +251,7 @@ JWT_SECRET=substitua_por_um_segredo_forte
 DATABASE_URL=mysql://db_user:db_password@localhost:3306/glx
 BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 BOOTSTRAP_ADMIN_PASSWORD=change_this_admin_password
+BOOTSTRAP_DEMO_USERS=cliente@glx.local|Cliente123!|essencial|Cliente Local GLX;pro@glx.local|Pro123!|pro|Pro Local GLX;enterprise@glx.local|Enterprise123!|enterprise|Enterprise Local GLX
 BOOTSTRAP_TEST_CLIENT_EMAILS=client1@example.com,client2@example.com
 BOOTSTRAP_TEST_CLIENT_PASSWORD=change_this_client_password
 BOOTSTRAP_TEST_CLIENT_NAME=Conta de Teste GLX

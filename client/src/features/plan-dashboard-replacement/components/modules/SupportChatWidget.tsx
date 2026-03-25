@@ -325,19 +325,20 @@ async function callClaudeStream(opts: {
   system: string;
   messages: Array<{ role: 'user' | 'assistant'; content: string }>;
   useWebSearch?: boolean;
+  model?: string;
   onChunk: (accumulated: string) => void;
   onDone: () => void;
   onError: (msg: string) => void;
 }): Promise<() => void> {
   const storedKey = localStorage.getItem(CLAUDE_API_KEY_STORAGE) ?? '';
   if (!storedKey) {
-    opts.onError('Chave API do Claude não configurada. Acesse Admin > Assistente IA para configurar.');
+    opts.onError('O assistente não está disponível no momento. Entre em contato com o suporte.');
     opts.onDone();
     return () => {};
   }
   const apiKey = await decryptApiKey(storedKey);
   if (!apiKey) {
-    opts.onError('Não foi possível descriptografar a chave API. Reconfigure em Admin > Assistente IA.');
+    opts.onError('Não foi possível iniciar o assistente. Entre em contato com o suporte.');
     opts.onDone();
     return () => {};
   }
@@ -345,7 +346,7 @@ async function callClaudeStream(opts: {
   const abort = new AbortController();
 
   const body: Record<string, unknown> = {
-    model: CLAUDE_MODEL,
+    model: opts.model ?? CLAUDE_MODEL,
     max_tokens: 1024,
     stream: true,
     system: opts.system,
@@ -527,6 +528,7 @@ export function SupportChatWidget({ theme: _theme, appointments, filters, active
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [webSearchOn, setWebSearchOn] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>(() => localStorage.getItem('glx_selected_model') ?? CLAUDE_MODEL);
   const [attachedFiles, setAttachedFiles] = useState<Array<{ name: string; preview?: string }>>([]);
   const [apiKeyStatus, setApiKeyStatus] = useState<'unchecked' | 'ok' | 'missing' | 'testing'>('unchecked');
   const [apiTestMsg, setApiTestMsg] = useState<string | null>(null);
@@ -745,6 +747,7 @@ Plano ativo: ${activePlan ?? 'ESSENTIAL'} | Fonte: ${kpiSourceMode ?? 'fallback'
       system,
       messages: [...history, { role: 'user', content: fullText }],
       useWebSearch: webSearchOn,
+      model: selectedModel,
       onChunk: (acc) => {
         setConversations(prev => prev.map(c =>
           c.id === activeConversation.id ? { ...c, messages: c.messages.map(m => m.id === assistantId ? { ...m, content: acc } : m) } : c
@@ -813,6 +816,7 @@ Responda sempre com base no contexto do projeto, seja objetivo e prático.`;
       system,
       messages: [...history, { role: 'user', content: trimmed }],
       useWebSearch: webSearchOn,
+      model: selectedModel,
       onChunk: (acc) => setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, messages: p.messages.map(m => m.id === assistantId ? { ...m, content: acc } : m) } : p)),
       onDone: () => setIsStreaming(false),
       onError: (msg) => {
@@ -1128,6 +1132,33 @@ Responda sempre com base no contexto do projeto, seja objetivo e prático.`;
                 </svg>
               </button>
 
+              {/* Model selector */}
+              <select
+                value={selectedModel}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value);
+                  localStorage.setItem('glx_selected_model', e.target.value);
+                }}
+                style={{
+                  margin: '0 8px',
+                  padding: '4px 8px',
+                  borderRadius: 14,
+                  border: `1px solid ${DARK.border}`,
+                  background: DARK.surface,
+                  color: DARK.muted,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  appearance: 'none',
+                  maxWidth: 140,
+                }}
+              >
+                <option value="claude-haiku-4-5-20251001">⚡ Haiku · Rápido</option>
+                <option value="claude-sonnet-4-6">✦ Sonnet · Equilibrado</option>
+                <option value="claude-opus-4-6">◆ Opus · Avançado</option>
+              </select>
+
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
@@ -1380,17 +1411,6 @@ Responda sempre com base no contexto do projeto, seja objetivo e prático.`;
                           }} />
                         </button>
                       </div>
-                    </div>
-                  )}
-                  {/* API test result toast */}
-                  {apiTestMsg && (
-                    <div style={{
-                      marginBottom: 8, padding: '8px 12px', borderRadius: 10, fontSize: 12,
-                      background: apiKeyStatus === 'ok' ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-                      color: apiKeyStatus === 'ok' ? '#4ade80' : '#f87171',
-                      border: `1px solid ${apiKeyStatus === 'ok' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
-                    }}>
-                      {apiTestMsg}
                     </div>
                   )}
                   {/* Attached files chips — above input bar */}
