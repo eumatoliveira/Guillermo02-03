@@ -256,13 +256,15 @@ export default function Login() {
     });
   }
 
-  // Mostra loading enquanto verifica autenticação ou está redirecionando
-  if (loading || isRedirecting) {
+  // Keep the login form visible while auth state is being checked.
+  // A slow /auth.me request (for example due to a stale session cookie)
+  // should not block the entire login screen behind a full-page spinner.
+  if (isRedirecting) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{isRedirecting ? t.redirecting : "Verificando..."}</p>
+          <p className="text-muted-foreground">{t.redirecting}</p>
         </div>
       </div>
     );
