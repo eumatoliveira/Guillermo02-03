@@ -518,7 +518,8 @@ export const integrations = mysqlTable("integrations", {
     "kommo", "asaas",
     "google_sheets", "gtm", "meta_pixel", "meta_capi",
     "google_ads", "google_ads_enhanced", "excel_graph_api",
-    "power_bi", "crm_hubspot", "crm_rd_station", "server_side_gtm"
+    "power_bi", "crm_hubspot", "crm_rd_station", "server_side_gtm",
+    "anthropic", "openai"
   ]).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   token: text("token"),

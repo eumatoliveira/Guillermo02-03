@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { AI_KEY_STORAGE_KEYS, saveStoredApiKey } from '@/lib/aiKeyStorage';
+import { trpc } from '@/lib/trpc';
 import type { KPISummary } from '../../data/dashboardTypes';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,7 +28,7 @@ interface Props {
 
 const STORAGE_KEY_FACTS  = 'glx_ai_facts_v2';
 const STORAGE_KEY_CHAT   = 'glx_ai_chat_v2';
-const STORAGE_KEY_APIKEY = 'glx_anthropic_key';
+const STORAGE_KEY_APIKEY = AI_KEY_STORAGE_KEYS.anthropic;
 
 // ── Crypto helpers (AES-GCM + PBKDF2) ────────────────────────────────────────
 const _ENC_PREFIX = 'glx_enc::';
@@ -249,6 +251,10 @@ function GLXIcon() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AIAssistantModule({ kpis, fmt }: Props): React.ReactElement | null {
+  const aiCredentialQuery = trpc.aiCredentials.get.useQuery(
+    { provider: 'anthropic' },
+    { refetchOnWindowFocus: false, staleTime: 60_000, retry: false },
+  );
   const [isOpen, setIsOpen]       = useState(false);
   // Start empty; decrypted key loaded async in useEffect below
   const [apiKey, setApiKey]       = useState<string>('');
@@ -277,6 +283,13 @@ export function AIAssistantModule({ kpis, fmt }: Props): React.ReactElement | nu
 
   // Load decrypted API key on mount
   useEffect(() => { _loadDecryptedApiKey().then(setApiKey); }, []);
+
+  useEffect(() => {
+    const remoteKey = aiCredentialQuery.data?.accessToken?.trim();
+    if (!remoteKey) return;
+    void saveStoredApiKey(STORAGE_KEY_APIKEY, remoteKey);
+    setApiKey(remoteKey);
+  }, [aiCredentialQuery.data?.accessToken]);
 
   useEffect(() => {
     if (isOpen) {

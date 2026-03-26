@@ -11,6 +11,7 @@ import { controlTowerRouter } from "./controlTowerRouter";
 import { currencyRouter } from "./currencyRouter";
 import { apiKeyRouter } from "./apiKeyRouter";
 import { aiChatRouter } from "./aiChatRouter";
+import { aiCredentialsRouter } from "./aiCredentialsRouter";
 import { getClientBySlug, getAllDashboardData, getManualEntries, createManualEntry, deleteManualEntry } from "./db";
 
 export const appRouter = router({
@@ -59,6 +60,7 @@ export const appRouter = router({
   controlTower: controlTowerRouter,
   currency: currencyRouter,
   apiKeys: apiKeyRouter,
+  aiCredentials: aiCredentialsRouter,
 
   // GLX Insights — Multi-Tenant AI Chat
   aiChat: aiChatRouter,

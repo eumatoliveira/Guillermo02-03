@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AI_KEY_STORAGE_KEYS, saveStoredApiKey } from '@/lib/aiKeyStorage';
+import { trpc } from '@/lib/trpc';
 import { computeKPIs, applyFilters, getAllAppointments, computeByChannel, computeByProfessional, computeByUnit, type Appointment, type Filters } from '../../data/mockData';
 import { resolveKpiMeta, type KpiSourceMode } from '../../utils/kpiMeta';
 
@@ -281,7 +283,7 @@ function createProject(name: string, description: string): Project {
   };
 }
 
-const CLAUDE_API_KEY_STORAGE = 'glx_anthropic_key';
+const CLAUDE_API_KEY_STORAGE = AI_KEY_STORAGE_KEYS.anthropic;
 const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 
 // ── Crypto helpers (AES-GCM + PBKDF2) ───────────────────────────────────────
@@ -485,6 +487,10 @@ const DARK = {
 };
 
 export function SupportChatWidget({ theme: _theme, appointments, filters, activePlan, kpiSourceMode, lang = 'PT' }: SupportChatWidgetProps) {
+  const aiCredentialQuery = trpc.aiCredentials.get.useQuery(
+    { provider: 'anthropic' },
+    { refetchOnWindowFocus: false, staleTime: 60_000, retry: false },
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [dashProfile, setDashProfile] = useState(readDashboardProfile);
 
@@ -532,6 +538,13 @@ export function SupportChatWidget({ theme: _theme, appointments, filters, active
   const [attachedFiles, setAttachedFiles] = useState<Array<{ name: string; preview?: string }>>([]);
   const [apiKeyStatus, setApiKeyStatus] = useState<'unchecked' | 'ok' | 'missing' | 'testing'>('unchecked');
   const [apiTestMsg, setApiTestMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const remoteKey = aiCredentialQuery.data?.accessToken?.trim();
+    if (!remoteKey) return;
+    void saveStoredApiKey(CLAUDE_API_KEY_STORAGE, remoteKey);
+    setApiKeyStatus('ok');
+  }, [aiCredentialQuery.data?.accessToken]);
 
   // Projects state
   const [projects, setProjects] = useState<Project[]>(() => readStoredProjects());

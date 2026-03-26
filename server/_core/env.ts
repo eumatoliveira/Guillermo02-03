@@ -103,6 +103,8 @@ export const ENV = {
   isDevelopment,
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  claudeApiKey: process.env.CLAUDE_API_KEY?.trim() ?? "",
+  openAiApiKey: process.env.OPENAI_API_KEY?.trim() ?? "",
   kommoClientId: process.env.KOMMO_CLIENT_ID?.trim() ?? "",
   kommoClientSecret: process.env.KOMMO_CLIENT_SECRET?.trim() ?? "",
   kommoWebhookSecret: process.env.KOMMO_WEBHOOK_SECRET?.trim() ?? "",

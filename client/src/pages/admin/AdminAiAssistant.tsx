@@ -6,51 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AI_KEY_STORAGE_KEYS, clearStoredApiKey, loadStoredApiKey, saveStoredApiKey } from "@/lib/aiKeyStorage";
+import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { Bot, CheckCircle2, ExternalLink, Eye, EyeOff, KeyRound, Save, ShieldCheck, Sparkles } from "lucide-react";
+import { Bot, CheckCircle2, ExternalLink, Eye, EyeOff, KeyRound, Loader2, Save, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-const STORAGE_KEY_CLAUDE = "glx_anthropic_key";
-const STORAGE_KEY_OPENAI = "glx_openai_key";
-
-// ── Crypto helpers (AES-GCM + PBKDF2) ────────────────────────────────────────
-const _ENC_PREFIX = 'glx_enc::';
-const _PBKDF2_SALT = new TextEncoder().encode('glx-insights-salt-2026');
-const _PBKDF2_PASS = 'glx-dashboard-secure-key-v1';
-
-async function _deriveKey(usage: 'encrypt' | 'decrypt'): Promise<CryptoKey> {
-  const raw = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(_PBKDF2_PASS), 'PBKDF2', false, ['deriveKey'],
-  );
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: _PBKDF2_SALT, iterations: 12000, hash: 'SHA-256' },
-    raw, { name: 'AES-GCM', length: 256 }, false, [usage],
-  );
-}
-
-async function _encryptKey(plain: string): Promise<string> {
-  const key = await _deriveKey('encrypt');
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plain));
-  const buf = new Uint8Array(12 + enc.byteLength);
-  buf.set(iv);
-  buf.set(new Uint8Array(enc), 12);
-  return _ENC_PREFIX + btoa(Array.from(buf, b => String.fromCharCode(b)).join(''));
-}
-
-async function _decryptKey(stored: string): Promise<string> {
-  if (!stored.startsWith(_ENC_PREFIX)) return stored; // legacy plain fallback
-  try {
-    const buf = Uint8Array.from(atob(stored.slice(_ENC_PREFIX.length)), c => c.charCodeAt(0));
-    const key = await _deriveKey('decrypt');
-    const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
-    return new TextDecoder().decode(dec);
-  } catch {
-    return '';
-  }
-}
+const STORAGE_KEY_CLAUDE = AI_KEY_STORAGE_KEYS.anthropic;
+const STORAGE_KEY_OPENAI = AI_KEY_STORAGE_KEYS.openai;
 
 type ProviderCardProps = {
+  provider: "anthropic" | "openai";
   title: string;
   description: string;
   storageKey: string;
@@ -62,6 +28,7 @@ type ProviderCardProps = {
 };
 
 function ProviderCard({
+  provider,
   title,
   description,
   storageKey,
@@ -71,23 +38,46 @@ function ProviderCard({
   accentClassName,
   badge,
 }: ProviderCardProps) {
+  const utils = trpc.useUtils();
+  const configQuery = trpc.aiCredentials.get.useQuery(
+    { provider },
+    { refetchOnWindowFocus: false, staleTime: 60_000, retry: false },
+  );
+  const saveMutation = trpc.aiCredentials.save.useMutation({
+    onSuccess: async () => {
+      await utils.aiCredentials.get.invalidate({ provider });
+    },
+  });
+
   const [value, setValue] = useState("");
   const [savedValue, setSavedValue] = useState("");
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(storageKey) ?? "";
-    if (!stored) return;
-    // Decrypt before displaying — never show the raw (possibly encrypted) blob
-    _decryptKey(stored).then((plain) => {
+    let cancelled = false;
+    loadStoredApiKey(storageKey).then((plain) => {
+      if (cancelled || !plain) return;
       setValue(plain);
       setSavedValue(plain);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [storageKey]);
 
-  const hasSavedValue = savedValue.trim().length > 0;
+  useEffect(() => {
+    if (!configQuery.data) return;
+    const next = configQuery.data.accessToken ?? "";
+    if (next) {
+      setSavedValue(next);
+      setValue(next);
+      void saveStoredApiKey(storageKey, next);
+    } else if (!savedValue.trim()) {
+      clearStoredApiKey(storageKey);
+    }
+  }, [configQuery.data, savedValue, storageKey]);
 
+  const hasSavedValue = savedValue.trim().length > 0;
   const maskedValue = useMemo(() => {
     if (!savedValue) return "";
     if (savedValue.length <= 10) return "••••••••";
@@ -96,20 +86,27 @@ function ProviderCard({
 
   const handleSave = async () => {
     const next = value.trim();
-    if (!next) {
-      window.localStorage.removeItem(storageKey);
-      setSavedValue("");
-      setValue("");
-      toast.success(`${title} removida do navegador.`);
-      return;
-    }
-
-    // Encrypt before persisting so the raw key never sits in plain text
-    const encrypted = await _encryptKey(next);
-    window.localStorage.setItem(storageKey, encrypted);
-    setSavedValue(next); // keep plaintext in state for display/masking
-    setValue(next);
-    toast.success(`${title} salva no navegador.`);
+    saveMutation.mutate(
+      { provider, accessToken: next },
+      {
+        onSuccess: async () => {
+          if (next) {
+            await saveStoredApiKey(storageKey, next);
+            setSavedValue(next);
+            setValue(next);
+            toast.success(`${title} salva no site e sincronizada neste navegador.`);
+            return;
+          }
+          clearStoredApiKey(storageKey);
+          setSavedValue("");
+          setValue("");
+          toast.success(`${title} removida do site e deste navegador.`);
+        },
+        onError: (error) => {
+          toast.error(error.message || `Nao foi possivel salvar ${title}.`);
+        },
+      },
+    );
   };
 
   return (
@@ -139,7 +136,7 @@ function ProviderCard({
             {badge}
           </div>
           <p className="mt-2 text-sm leading-6 text-[#111111]">
-            {hasSavedValue ? `Chave salva localmente: ${maskedValue}` : "Nenhuma chave salva neste navegador ainda."}
+            {hasSavedValue ? `Chave persistida no site: ${maskedValue}` : "Nenhuma chave persistida ainda."}
           </p>
         </div>
 
@@ -179,17 +176,19 @@ function ProviderCard({
               type="button"
               variant="outline"
               onClick={() => {
-                window.localStorage.removeItem(storageKey);
-                setSavedValue("");
                 setValue("");
-                toast.success(`${title} removida do navegador.`);
               }}
               className="h-11 rounded-2xl border-[#d7e1ef] bg-white px-4 text-[#111111]"
             >
-              Limpar
+              Limpar campo
             </Button>
-            <Button type="button" onClick={handleSave} className="h-11 rounded-2xl bg-[#111111] px-5 text-white hover:bg-[#222222]">
-              <Save className="mr-2 h-4 w-4" />
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={saveMutation.isPending || configQuery.isLoading}
+              className="h-11 rounded-2xl bg-[#111111] px-5 text-white hover:bg-[#222222]"
+            >
+              {saveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
               Salvar
             </Button>
           </div>
@@ -214,17 +213,17 @@ export default function AdminAiAssistant() {
                 Credenciais do assistente
               </h1>
               <p className="mt-3 text-base leading-8 text-[#526070]">
-                Centralize aqui as chaves da IA do navegador admin. O chat do dashboard deixa de pedir credenciais dentro do modal e passa a depender desta configuração.
+                Agora a chave fica persistida no backend da conta logada e o dashboard reidrata o navegador automaticamente quando precisar.
               </p>
             </div>
 
             <div className="rounded-[26px] border border-[#e5f3ea] bg-[#f3fbf6] p-4 text-sm text-[#18794e] shadow-[0_12px_30px_rgba(24,121,78,0.08)]">
               <div className="flex items-center gap-2 font-semibold">
                 <ShieldCheck className="h-4 w-4" />
-                Armazenamento local
+                Persistencia dupla
               </div>
               <p className="mt-2 max-w-sm leading-6 text-[#3f6f57]">
-                As chaves ficam salvas apenas no navegador atual via `localStorage`. Nada aqui vai para o backend.
+                A chave fica salva no site para a sua conta e tambem em cache local no navegador atual para evitar reconfiguracao recorrente.
               </p>
             </div>
           </div>
@@ -232,6 +231,7 @@ export default function AdminAiAssistant() {
 
         <div className="grid gap-6 xl:grid-cols-2">
           <ProviderCard
+            provider="anthropic"
             title="Claude API key"
             description="Usada pelo Assistente GLX atual no dashboard para conversar com os dados analisados."
             storageKey={STORAGE_KEY_CLAUDE}
@@ -243,8 +243,9 @@ export default function AdminAiAssistant() {
           />
 
           <ProviderCard
+            provider="openai"
             title="OpenAI API key"
-            description="Campo preparado no admin para a chave da OpenAI, com acesso rápido ao link oficial de criação."
+            description="Campo preparado no admin para a chave da OpenAI, com acesso rapido ao link oficial de criacao."
             storageKey={STORAGE_KEY_OPENAI}
             placeholder="sk-proj-..."
             docsHref="https://platform.openai.com/api-keys"
@@ -263,7 +264,7 @@ export default function AdminAiAssistant() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm leading-6 text-[#111111]">
-              Configure as chaves aqui no admin e depois abra o assistente no dashboard. O modal não exibe mais formulário de credenciais.
+              Configure as chaves aqui no admin. O dashboard passa a buscar essa configuracao automaticamente antes de pedir qualquer chave novamente.
             </CardContent>
           </Card>
 
@@ -275,7 +276,7 @@ export default function AdminAiAssistant() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm leading-6 text-[#111111]">
-              O assistente do dashboard continua usando a chave da Claude já existente, só que agora a configuração mora no painel admin.
+              O assistente principal do dashboard usa essa chave como fonte primaria e repopula o cache local quando necessario.
             </CardContent>
           </Card>
 
@@ -287,7 +288,7 @@ export default function AdminAiAssistant() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm leading-6 text-[#111111]">
-              A chave da OpenAI já fica cadastrável aqui com link oficial em `platform.openai.com/api-keys`.
+              A chave da OpenAI tambem fica persistivel por conta, pronta para futuros modulos que dependam dela.
             </CardContent>
           </Card>
         </section>

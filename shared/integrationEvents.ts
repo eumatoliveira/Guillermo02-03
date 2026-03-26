@@ -1,4 +1,4 @@
-export type IntegrationProvider = "kommo" | "asaas";
+export type IntegrationProvider = "kommo" | "asaas" | "anthropic" | "openai";
 
 export type IntegrationEventEntity =
   | "lead"
