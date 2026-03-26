@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerSiteRoutes } from "../siteRouter";
-import { serveStatic, setupVite } from "./vite";
+import { serveStatic } from "./static";
 import { registerKommoWebhookRouter } from "../infrastructure/webhooks/kommoRouter";
 import { registerAsaasWebhookRouter } from "../infrastructure/webhooks/asaasRouter";
 import { currencyService } from "../domain/currencyService";
@@ -286,6 +286,11 @@ export async function startServer() {
   currencyService.startAutoRefresh();
 
   if (process.env.NODE_ENV === "development") {
+    const importRuntimeModule = new Function(
+      "modulePath",
+      "return import(modulePath);",
+    ) as (modulePath: string) => Promise<typeof import("./vite")>;
+    const { setupVite } = await importRuntimeModule("./vite");
     await setupVite(app, server);
   } else {
     serveStatic(app);
