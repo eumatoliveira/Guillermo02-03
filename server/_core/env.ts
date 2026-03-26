@@ -83,7 +83,7 @@ if (isProduction && !jwtSecret) {
 }
 
 if (isProduction && !process.env.DATABASE_URL) {
-  throw new Error("[ENV] Missing DATABASE_URL in production. Set DATABASE_URL before starting the server.");
+  console.warn("[ENV] DATABASE_URL is not configured in production. Falling back to in-memory storage.");
 }
 
 const developmentSecret = `dev-${randomBytes(24).toString("hex")}`;
