@@ -237,9 +237,41 @@ function registerAppRoutes(app: Express) {
       createContext,
     })
   );
+
+  app.use("/api", (req: Request, res: Response) => {
+    res.status(404).json({
+      error: "not_found",
+      message: `API route not found: ${req.originalUrl}`,
+    });
+  });
+
+  app.use((error: unknown, req: Request, res: Response, next: NextFunction) => {
+    if (!req.path.startsWith("/api")) {
+      next(error);
+      return;
+    }
+
+    console.error("[API] Unhandled error:", error);
+
+    if (res.headersSent) {
+      next(error);
+      return;
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Unexpected API error";
+
+    res.status(500).json({
+      error: "internal_server_error",
+      message,
+    });
+  });
 }
 
 export async function createHttpApp(): Promise<Express> {
+  await getDb();
+  await bootstrapDone;
+
   const app = express();
   registerAppRoutes(app);
   serveStatic(app);
