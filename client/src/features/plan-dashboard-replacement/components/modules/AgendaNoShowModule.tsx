@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { LostCapacityCard } from './LostCapacityCard';
 import {
   AreaChart, Area, BarChart, Bar, ComposedChart, Line, LineChart,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -109,6 +111,7 @@ interface Props {
 
 export function AgendaNoShowModule({ agendaWeeks, filtered, kpis, filters, showTargets, plan = 'ESSENTIAL' }: Props) {
   const isPro = plan === 'PRO' || plan === 'ENTERPRISE';
+  const { convertMoneyValue, formatCompactMoney } = useCurrency();
 
   // KPI 1 — No-show rate series
   const noShowSeries = useMemo(
@@ -187,9 +190,8 @@ export function AgendaNoShowModule({ agendaWeeks, filtered, kpis, filters, showT
   const periodMult  = periodDays / 30;
   const costP1 = Math.round(T.noShowCost.p1 * periodMult);
   const costP3 = Math.round(T.noShowCost.p3 * periodMult);
-  const fmtCostThr = (v: number) => v >= 1000 ? `R$${(v / 1000 % 1 === 0 ? v / 1000 : (v / 1000).toFixed(1))}k` : `R$${v}`;
-  const costP1Label = fmtCostThr(costP1);
-  const costP3Label = fmtCostThr(costP3);
+  const costP1Label = formatCompactMoney(costP1);
+  const costP3Label = formatCompactMoney(costP3);
   const periodLabel = filters.period === '7d' ? 'semana' : filters.period === '15d' ? 'quinzena'
                     : filters.period === '3m' ? 'trimestre' : filters.period === '6m' ? 'semestre'
                     : filters.period === '1 ano' ? 'ano' : 'mês';
@@ -220,6 +222,10 @@ export function AgendaNoShowModule({ agendaWeeks, filtered, kpis, filters, showT
   const lastNoShowCost = noShowCostSeries.length ? noShowCostSeries[noShowCostSeries.length - 1].monthlyCost : 0;
 
   const curConf = agendaWeeks.length ? agendaWeeks[agendaWeeks.length - 1].confirmationRate : kpis.confirmationRate;
+
+  // Cancelamento tardio (< 24h) rate para o LostCapacityCard
+  const cancelTardioCount = filtered.filter(a => a.status === 'Cancelada').length;
+  const cancelTardioRate  = kpis.total > 0 ? (cancelTardioCount / kpis.total) * 100 : 0;
 
   return (
     <div className="chart-grid">
@@ -347,62 +353,56 @@ export function AgendaNoShowModule({ agendaWeeks, filtered, kpis, filters, showT
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* KPI 5 — No-show cost (PRO+) */}
-      {isPro && <ChartCard
-        title="Custo Estimado do No-show (R$)"
-        priority={noShowCostPriority(lastNoShowCost) as any}
-        kpiValue={`R$ ${(lastNoShowCost/1000).toFixed(1)}k`}
-        subtitle="Custo mensal e acumulado de consultas perdidas"
-        fullWidth
-        note={`Verde < ${costP1Label}/${periodLabel} | Amarelo ${costP1Label}–${costP3Label} | Vermelho > ${costP3Label}/${periodLabel}`}
-      >
-        <ResponsiveContainer width="100%" height={200}>
-          <ComposedChart data={noShowCostSeries} margin={{ top: 10, right: 40, left: 10, bottom: 0 }}>
-            <CartesianGrid {...GRID_STYLE} />
-            <XAxis dataKey="label" tick={TICK_STYLE} />
-            <YAxis yAxisId="left" tick={TICK_STYLE} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-            <YAxis yAxisId="right" orientation="right" tick={TICK_STYLE} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: any, name: any) => [
-              `R$ ${(v as number).toLocaleString('pt-BR')}`, name === 'monthlyCost' ? 'Custo no período' : 'Acumulado'
-            ]} />
-            <ReferenceLine yAxisId="left" y={costP1} stroke={C.green} strokeDasharray="4 3" strokeWidth={1.5}
-              label={{ value: `P1 ${costP1Label}`, position: 'insideTopRight', fill: C.green, fontSize: 10 }} />
-            <ReferenceLine yAxisId="left" y={costP3} stroke={C.red}   strokeDasharray="4 3" strokeWidth={1.5}
-              label={{ value: `P3 ${costP3Label}`, position: 'insideTopRight', fill: C.red,   fontSize: 10 }} />
-            <Bar yAxisId="left" dataKey="monthlyCost" name="monthlyCost" fill={C.red} fillOpacity={0.7} radius={[4, 4, 0, 0]} animationDuration={300} />
-            <Line yAxisId="right" type="monotone" dataKey="accumulated" name="accumulated" stroke="#BA7517" strokeWidth={2} dot={{ r: 3 }} animationDuration={300} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </ChartCard>}
+      {/* KPI 5 — No-show cost gauge (PRO+) */}
+      {isPro && (() => {
+        const costColor = lastNoShowCost < costP1 ? C.green : lastNoShowCost < costP3 ? C.amber : C.red;
+        const gaugeMax  = costP3 * 2;
+        const gaugePct  = Math.min(100, (lastNoShowCost / gaugeMax) * 100);
+        return (
+          <ChartCard
+            title="Custo Estimado do No-show"
+            priority={noShowCostPriority(lastNoShowCost) as any}
+            subtitle="Receita perdida com no-shows no período"
+            note={`Verde < ${costP1Label}/${periodLabel} | Amarelo ${costP1Label}–${costP3Label} | Vermelho > ${costP3Label}/${periodLabel}`}
+          >
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+              <ResponsiveContainer width="100%" height={140}>
+                <PieChart>
+                  <Pie
+                    data={[{ value: gaugePct }, { value: Math.max(0, 100 - gaugePct) }]}
+                    startAngle={180} endAngle={0}
+                    cx="50%" cy="100%"
+                    innerRadius={70} outerRadius={110}
+                    paddingAngle={0} dataKey="value"
+                    animationDuration={400}
+                  >
+                    <Cell fill={costColor} />
+                    <Cell fill="var(--chart-grid, #e5e7eb)" />
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ position:'absolute', bottom:4, left:'50%', transform:'translateX(-50%)', textAlign:'center', pointerEvents:'none' }}>
+                <div style={{ fontSize:28, fontWeight:800, color:costColor, lineHeight:1 }}>{formatCompactMoney(lastNoShowCost)}</div>
+                <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:4 }}>no período</div>
+              </div>
+            </div>
+            {/* Marcadores P1 / P3 abaixo do gauge */}
+            <div style={{ display:'flex', justifyContent:'space-between', padding:'4px 12px 0', fontSize:11, color:'var(--text-muted)' }}>
+              <span style={{ color: C.green }}>P1 {costP1Label}</span>
+              <span style={{ color: C.amber }}>P2</span>
+              <span style={{ color: C.red   }}>P3 {costP3Label}</span>
+            </div>
+          </ChartCard>
+        );
+      })()}
 
       {/* KPI 6 — Capacity loss (PRO+) */}
-      {isPro && <ChartCard
-        title="Taxa de Perda de Capacidade não Recuperável (%)"
-        priority={lostCapPriority(kpis.noShowRate) as any}
-        kpiValue={`${kpis.noShowRate.toFixed(1)}%`}
-        subtitle="No-shows + cancelamentos tardios ÷ total de slots"
-        note="Verde < 8% | Amarelo 8-15% | Vermelho > 15%"
-      >
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={lostCapSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="lcGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={C.red} stopOpacity={0.22} />
-                <stop offset="100%" stopColor={C.red} stopOpacity={0.03} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...GRID_STYLE} />
-            <XAxis dataKey="label" tick={TICK_STYLE} />
-            <YAxis tick={TICK_STYLE} unit="%" domain={[0, 25]} />
-            <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [`${v}%`, 'Perda']} />
-            <ReferenceLine y={T.lostCap.p1} stroke={C.green} strokeDasharray="4 3" strokeWidth={1.5}
-              label={{ value: 'P1 8%', position: 'insideTopRight', fill: C.green, fontSize: 10 }} />
-            <ReferenceLine y={T.lostCap.p3} stroke={C.red}   strokeDasharray="4 3" strokeWidth={1.5}
-              label={{ value: 'P3 15%', position: 'insideTopRight', fill: C.red,   fontSize: 10 }} />
-            <Area type="monotone" dataKey="value" stroke={C.red} strokeWidth={2} fill="url(#lcGrad)" animationDuration={300} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </ChartCard>}
+      {isPro && (
+        <LostCapacityCard
+          noShow={+kpis.noShowRate.toFixed(1)}
+          cancelamentoTardio={+cancelTardioRate.toFixed(1)}
+        />
+      )}
 
       {/* KPI 7 — Lead time bullet chart */}
       <ChartCard

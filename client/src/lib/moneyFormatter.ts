@@ -46,13 +46,19 @@ export const MoneyFormatter = {
       return symbolAfter ? `${sign}${numStr}${symbol}` : `${sign}${symbol}${numStr}`;
     }
 
-    // BRL uses pt-BR compact ("mil" / "mi") which is familiar to users
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      notation: abs >= 1000 ? "compact" : "standard",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 1,
-    }).format(value);
+    // BRL — formato manual com sufixo k/M para consistência com outras moedas
+    const sign = value < 0 ? "-" : "";
+    if (abs >= 1_000_000) {
+      const divided = abs / 1_000_000;
+      const numStr = divided % 1 === 0 ? divided.toFixed(0) : divided.toFixed(1);
+      return `${sign}R$ ${numStr}M`;
+    }
+    if (abs >= 1000) {
+      const divided = abs / 1000;
+      const numStr = divided % 1 === 0 ? divided.toFixed(0) : divided.toFixed(1);
+      return `${sign}R$ ${numStr}k`;
+    }
+    const numStr = abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1);
+    return `${sign}R$ ${numStr}`;
   },
 };

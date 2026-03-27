@@ -1,4 +1,4 @@
-import { useMemo, useCallback, memo, useState } from 'react';
+import { useMemo, useCallback, memo, useState, useEffect } from 'react';
 import ReactApexChart from 'react-apexcharts';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useTranslation } from '../i18n';
@@ -63,6 +63,17 @@ const KPI_INFO: Record<string, { formula: string; explanation: string }> = {
   sla:          { formula: 'SLA = Soma dos tempos de resposta ÷ Total de leads respondidos', explanation: 'Para cada lead, calcule o tempo entre o primeiro contato e a primeira resposta da equipe. Some tudo e divida pelo número de leads atendidos.' },
 };
 
+type MemberGoals = {
+  consultas: string;
+  receita: string;
+  nps: string;
+  noShow: string;
+  ocupacao: string;
+  espera: string;
+};
+
+const EMPTY_MEMBER_GOALS: MemberGoals = { consultas: '', receita: '', nps: '', noShow: '', ocupacao: '', espera: '' };
+
 type TeamMemberForm = {
   name: string;
   role: string;
@@ -73,6 +84,7 @@ type TeamMemberForm = {
   noShowRate: string;
   occupancyRate: string;
   avgWait: string;
+  goals: MemberGoals;
 };
 
 function weekKey(dateStr: string) {
@@ -93,7 +105,100 @@ const EMPTY_TEAM_MEMBER_FORM: TeamMemberForm = {
   noShowRate: '',
   occupancyRate: '',
   avgWait: '',
+  goals: { ...EMPTY_MEMBER_GOALS },
 };
+
+type ClinicGoals = {
+  npsP1: string;
+  waitP1: string;
+  noShowP1: string;
+  occupancyP1: string;
+  ticketP1: string;
+  returnP1: string;
+};
+
+const DEFAULT_CLINIC_GOALS: ClinicGoals = {
+  npsP1: '8.5',
+  waitP1: '12',
+  noShowP1: '10',
+  occupancyP1: '70',
+  ticketP1: '',
+  returnP1: '40',
+};
+
+// ── Marketing KPI strip card ──────────────────────────────────────────────────
+interface MkCardProps {
+  label: string; value: string; meta: string; color: string;
+  isFiltered: boolean; filterLabel: string;
+  hasData?: boolean; isLeads?: boolean;
+  onClick?: () => void;
+}
+function MkCard({ label, value, meta, color, isFiltered, filterLabel, hasData = true, isLeads = false, onClick }: MkCardProps) {
+  const [visible, setVisible]     = useState(true);
+  const [displayed, setDisplayed] = useState(value);
+  const [dotHov, setDotHov]       = useState(false);
+
+  useEffect(() => {
+    if (displayed === value) return;
+    setVisible(false);
+    const t = setTimeout(() => { setDisplayed(value); setVisible(true); }, 120);
+    return () => clearTimeout(t);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cardColor    = hasData ? color : '#D1D5DB';
+  const showDot      = !isLeads && isFiltered && hasData;
+
+  return (
+    <div className="overview-card" onClick={onClick}
+      style={{ borderTop: `3px solid ${cardColor}`, padding: '12px 14px', cursor: 'pointer', opacity: hasData ? 1 : 0.5, position: 'relative' }}
+    >
+      {showDot && (
+        <div onMouseEnter={() => setDotHov(true)} onMouseLeave={() => setDotHov(false)}
+          style={{ position: 'absolute', top: 8, right: 8, width: 6, height: 6, borderRadius: '50%', background: '#3B82F6' }}
+        >
+          {dotHov && (
+            <div style={{
+              position: 'absolute', top: -32, right: 0,
+              background: '#1f2937', color: '#fff', fontSize: 10,
+              padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap',
+              pointerEvents: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.25)', zIndex: 50,
+            }}>Exibindo dado filtrado</div>
+          )}
+        </div>
+      )}
+      <div className="overview-card-label" style={{ fontSize: 10, marginBottom: 6 }}>{label}</div>
+      <div className="overview-card-value" style={{
+        color: cardColor, fontSize: 24, lineHeight: 1.1,
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(4px)',
+        transition: 'opacity 200ms ease, transform 200ms ease',
+      }}>
+        {hasData ? displayed : '—'}
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.3 }}>
+        {hasData ? meta : 'Sem dados para o filtro'}
+      </div>
+      {!isLeads && (
+        <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+            {isFiltered ? filterLabel : 'Média do período'}
+          </span>
+          <span style={{
+            background: isFiltered ? '#EFF6FF' : '#F3F4F6',
+            color: isFiltered ? '#3B82F6' : '#94A3B8',
+            borderRadius: 999, padding: '1px 6px', fontSize: 10,
+            fontWeight: isFiltered ? 600 : 400, whiteSpace: 'nowrap',
+          }}>
+            {isFiltered ? 'filtrado' : 'sem filtro ativo'}
+          </span>
+        </div>
+      )}
+      {isLeads && (
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 5 }}>Total no período</div>
+      )}
+    </div>
+  );
+}
 
 function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange, lang = "PT", appointments, integrationHealth }: Props) {
   const { formatCompactMoney, moneyTitle } = useCurrency();
@@ -106,7 +211,17 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
   const kpis = useMemo(() => computeKPIs(filtered), [filtered]);
   const byProf = useMemo(() => computeByProfessional(filtered), [filtered]);
   const byChannel = useMemo(() => computeByChannel(filtered), [filtered]);
-  const byProc = useMemo(() => computeByProcedure(filtered), [filtered]);
+  const byProc    = useMemo(() => computeByProcedure(filtered), [filtered]);
+  const byProcAll = useMemo(() => computeByProcedure(allData),  [allData]);
+
+  // ── Base data WITHOUT canal filter — used by all Ops scorecards except SLA Lead ──
+  const filteredNoCanal = useMemo(() =>
+    filters.channel ? applyFilters(allData, { ...filters, channel: '' }) : filtered,
+  [allData, filters, filtered]);
+  const kpisNoCanal   = useMemo(() => computeKPIs(filteredNoCanal),             [filteredNoCanal]);
+  const byProfNoCanal = useMemo(() => computeByProfessional(filteredNoCanal),   [filteredNoCanal]);
+  const byProcNoCanal    = useMemo(() => computeByProcedure(filteredNoCanal),   [filteredNoCanal]);
+  const byChannelNoCanal = useMemo(() => computeByChannel(filteredNoCanal),     [filteredNoCanal]);
   const weeklyTrend = useMemo(() => computeWeeklyTrend(filtered), [filtered]);
   const [teamMemberForm, setTeamMemberForm] = useState<TeamMemberForm>(EMPTY_TEAM_MEMBER_FORM);
   const [manualTeamMembers, setManualTeamMembers] = useState<ProfessionalRow[]>([]);
@@ -114,6 +229,10 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
   const [editingBaseTeamMemberName, setEditingBaseTeamMemberName] = useState<string | null>(null);
   const [deletedBaseTeamMemberNames, setDeletedBaseTeamMemberNames] = useState<string[]>([]);
   const [baseTeamMemberOverrides, setBaseTeamMemberOverrides] = useState<Record<string, ProfessionalRow>>({});
+  const [memberGoals, setMemberGoals] = useState<Record<string, MemberGoals>>({});
+  const [clinicGoals, setClinicGoals] = useState<ClinicGoals>(DEFAULT_CLINIC_GOALS);
+  const [goalsForm, setGoalsForm] = useState<ClinicGoals>(DEFAULT_CLINIC_GOALS);
+  const [goalsSaved, setGoalsSaved] = useState(false);
   const [kpiModal, setKpiModal] = useState<{ title: string; formula: string; explanation: string } | null>(null);
   const openKpiModal = useCallback((title: string, kpiKey: string) => {
     const info = KPI_INFO[kpiKey];
@@ -246,7 +365,7 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
     return rows;
   }, [activeChannels, marketingProWeeks]);
   const opsProByProfessional = useMemo(() => {
-    return byProf.map((p, idx) => ({
+    return byProfNoCanal.map((p, idx) => ({
       ...p,
       npsResponses: p.promoters + p.neutrals + p.detractors,
       waitByDoctor: Math.max(4, Math.round(p.avgWait + (idx === 1 ? 7 : idx === 0 ? 2 : -1))),
@@ -254,7 +373,7 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       slaLeadH: +(0.7 + idx * 0.9 + (idx === 1 ? 2.2 : 0)).toFixed(1),
       rcaHint: p.avgNPS < 7.5 ? 'Atraso + handoff recepcao + expectativa' : 'Sem RCA critica',
     }));
-  }, [byProf]);
+  }, [byProfNoCanal]);
   const receptionSLARanking = useMemo(() => {
     const names = ['Julia (Recepcao)', 'Marina (Recepcao)', 'Paula (Recepcao)'];
     return names.map((name, idx) => ({
@@ -263,8 +382,11 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       leadsResponded: Math.max(10, Math.round(kpis.leads / 3) + idx * 3),
     }));
   }, [kpis.leads]);
-  const handleTeamMemberFormChange = useCallback((field: keyof TeamMemberForm, value: string) => {
+  const handleTeamMemberFormChange = useCallback((field: keyof Omit<TeamMemberForm,'goals'>, value: string) => {
     setTeamMemberForm((current) => ({ ...current, [field]: value }));
+  }, []);
+  const handleGoalChange = useCallback((field: keyof MemberGoals, value: string) => {
+    setTeamMemberForm((current) => ({ ...current, goals: { ...current.goals, [field]: value } }));
   }, []);
 
   const handleAddTeamMember = useCallback(() => {
@@ -341,6 +463,8 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       setBaseTeamMemberOverrides((current) => ({ ...current, [editingBaseTeamMemberName]: nextMember }));
       setDeletedBaseTeamMemberNames((current) => current.filter((name) => name !== editingBaseTeamMemberName));
     }
+    // Save individual goals keyed by member name
+    setMemberGoals(current => ({ ...current, [nextMember.name]: { ...teamMemberForm.goals } }));
     setTeamMemberForm(EMPTY_TEAM_MEMBER_FORM);
     setEditingManualTeamMemberIndex(null);
     setEditingBaseTeamMemberName(null);
@@ -360,10 +484,11 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       noShowRate: member.noShowRate.toFixed(1),
       occupancyRate: member.occupancyRate.toFixed(1),
       avgWait: member.avgWait.toFixed(0),
+      goals: memberGoals[member.name] ?? { ...EMPTY_MEMBER_GOALS },
     });
     setEditingManualTeamMemberIndex(index);
     setEditingBaseTeamMemberName(null);
-  }, [manualTeamMembers]);
+  }, [manualTeamMembers, memberGoals]);
 
   const handleEditBaseTeamMember = useCallback((name: string) => {
     const member = displayedTeamMembers.find((current) => current.name === name);
@@ -379,10 +504,11 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       noShowRate: member.noShowRate.toFixed(1),
       occupancyRate: member.occupancyRate.toFixed(1),
       avgWait: member.avgWait.toFixed(0),
+      goals: memberGoals[member.name] ?? { ...EMPTY_MEMBER_GOALS },
     });
     setEditingBaseTeamMemberName(name);
     setEditingManualTeamMemberIndex(null);
-  }, [displayedTeamMembers]);
+  }, [displayedTeamMembers, memberGoals]);
 
   const handleDeleteManualTeamMember = useCallback((index: number) => {
     setManualTeamMembers((current) => current.filter((_, currentIndex) => currentIndex !== index));
@@ -405,7 +531,7 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
     setEditingBaseTeamMemberName(null);
   }, []);
 
-  const showFilterBar = activeTab !== 6;
+  const showFilterBar = activeTab !== 5 && activeTab !== 6;
 
   return (
     <div className="animate-fade-in" key={activeTab}>
@@ -437,14 +563,10 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
           const latest = marketingProWeeks[marketingProWeeks.length - 1];
           return latest?.leadsTotal > 0 ? (latest.booked / latest.leadsTotal) * 100 : 0;
         })();
-        const selectedRoi = filters.channel
-          ? (marketingChannelStats.find(c => c.name === filters.channel) ?? null)
-          : null;
         const totalSpend   = marketingChannelStats.reduce((s, c) => s + c.spend,   0);
         const totalRevenue = marketingChannelStats.reduce((s, c) => s + c.revenue, 0);
-        const totalRoi     = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0;
-        const activeRoi    = selectedRoi?.roi ?? totalRoi;
-        const activeRoiLabel = filters.channel ? filters.channel : 'Total';
+        const activeRoi    = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0;
+        const activeRoiLabel = 'Todos';
         const roiColor = activeRoi >= 200 ? CL.green : activeRoi >= 100 ? CL.amber : CL.red;
         const roiLabel = `${activeRoi.toFixed(0)}% (${activeRoiLabel})`;
 
@@ -533,12 +655,107 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       {/* ===== FINANCEIRO AVANCADO ===== */}
       {activeTab === 2 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Financeiro Avançado</h2></div>
-        <div className="overview-row">
-          <div className="overview-card"><div className="overview-card-label">{moneyTitle('EBITDA')}</div><div className="overview-card-value">{fmt(financeAdvWeeks[financeAdvWeeks.length - 1]?.ebitda ?? 0)}</div></div>
-          <div className="overview-card"><div className="overview-card-label">Margem EBITDA</div><div className="overview-card-value" style={{ color: (financeAdvWeeks[financeAdvWeeks.length - 1]?.ebitdaMargin ?? 0) >= 20 ? 'var(--green)' : 'var(--yellow)' }}>{(financeAdvWeeks[financeAdvWeeks.length - 1]?.ebitdaMargin ?? 0).toFixed(1)}%</div></div>
-          <div className="overview-card"><div className="overview-card-label">{moneyTitle("Aging >90d")}</div><div className="overview-card-value">{fmt(agingReceivables.buckets.find((b) => b.label === '>90d')?.value ?? 0)}</div></div>
-          <div className="overview-card"><div className="overview-card-label">{moneyTitle('Break-even')}</div><div className="overview-card-value">{fmt(breakEven.breakEvenRevenue)}</div></div>
-        </div>
+        {(() => {
+          const G = 'var(--green)', Y = 'var(--yellow)', R = 'var(--red)';
+          const lastFin = financeWeeksForModule.length ? financeWeeksForModule[financeWeeksForModule.length - 1] : null;
+          const lastAdv = financeAdvWeeks.length ? financeAdvWeeks[financeAdvWeeks.length - 1] : null;
+          const netPct          = kpis.grossRevenue > 0 ? (kpis.netRevenue / kpis.grossRevenue) * 100 : 0;
+          const marginPct       = lastFin?.marginPct ?? 0;
+          const delinqPct       = lastFin?.delinquencyPct ?? 0;
+          const fixedPct        = lastFin?.fixedPct ?? 0;
+          const ebitdaPct       = lastAdv?.ebitdaMargin ?? 0;
+          const forecastP50     = lastAdv?.forecastP50 ?? kpis.grossRevenue;
+          const posicaoCaixa    = kpis.grossRevenue - kpis.totalCost;
+          const breakEvenCov    = breakEven.breakEvenRevenue > 0 ? (kpis.grossRevenue / breakEven.breakEvenRevenue) * 100 : 100;
+          const cards = [
+            {
+              label: 'Faturamento Bruto Mensal',
+              value: fmt(kpis.grossRevenue),
+              color: breakEvenCov >= 100 ? G : breakEvenCov >= 80 ? Y : R,
+              meta: `${breakEvenCov.toFixed(0)}% do break-even`,
+              kpiKey: 'faturamento',
+            },
+            {
+              label: 'Receita Líquida',
+              value: fmt(kpis.netRevenue),
+              color: netPct >= 70 ? G : netPct >= 55 ? Y : R,
+              meta: `${netPct.toFixed(1)}% do faturamento bruto`,
+              kpiKey: 'margem',
+            },
+            {
+              label: 'Margem Líquida Total (%)',
+              value: `${marginPct.toFixed(1)}%`,
+              color: marginPct >= 20 ? G : marginPct >= 10 ? Y : R,
+              meta: 'P1 ≥ 20% | P2 10–20% | P3 < 10%',
+              kpiKey: 'margem',
+            },
+            {
+              label: 'Ticket Médio',
+              value: fmt(kpis.avgTicket),
+              color: kpis.avgTicket >= 700 ? G : kpis.avgTicket >= 550 ? Y : R,
+              meta: 'P1 ≥ R$700 | P2 R$550–700 | P3 < R$550',
+              kpiKey: 'faturamento',
+            },
+            {
+              label: 'Inadimplência (%)',
+              value: `${delinqPct.toFixed(1)}%`,
+              color: delinqPct < 3 ? G : delinqPct < 7 ? Y : R,
+              meta: 'P1 < 3% | P2 3–7% | P3 > 7%',
+              kpiKey: 'inadimplencia',
+            },
+            {
+              label: 'Despesas Fixas / Receita (%)',
+              value: `${fixedPct.toFixed(1)}%`,
+              color: fixedPct < 40 ? G : fixedPct < 55 ? Y : R,
+              meta: 'P1 < 40% | P2 40–55% | P3 > 55%',
+              kpiKey: 'despesasfixas',
+            },
+            {
+              label: 'DRE Gerencial: EBITDA %',
+              value: `${ebitdaPct.toFixed(1)}%`,
+              color: ebitdaPct >= 20 ? G : ebitdaPct >= 10 ? Y : R,
+              meta: 'P1 ≥ 20% | P2 10–20% | P3 < 10%',
+              kpiKey: 'margem',
+            },
+            {
+              label: 'Forecast de Receita',
+              value: fmt(forecastP50),
+              color: forecastP50 >= kpis.grossRevenue ? G : forecastP50 >= kpis.grossRevenue * 0.85 ? Y : R,
+              meta: forecastP50 >= kpis.grossRevenue ? 'Acima do realizado' : `${((forecastP50 / Math.max(kpis.grossRevenue, 1)) * 100).toFixed(0)}% do faturamento atual`,
+              kpiKey: 'faturamento',
+            },
+            {
+              label: 'Posição de Caixa',
+              value: fmt(posicaoCaixa),
+              color: posicaoCaixa > kpis.grossRevenue * 0.15 ? G : posicaoCaixa > 0 ? Y : R,
+              meta: posicaoCaixa > 0 ? 'Caixa positivo' : 'Caixa negativo — atenção',
+              kpiKey: 'faturamento',
+            },
+            {
+              label: 'Break-even',
+              value: fmt(breakEven.breakEvenRevenue),
+              color: breakEvenCov >= 120 ? G : breakEvenCov >= 100 ? Y : R,
+              meta: `Cobertura: ${breakEvenCov.toFixed(0)}% — ${breakEvenCov >= 100 ? 'atingido' : 'não atingido'}`,
+              kpiKey: 'faturamento',
+            },
+          ];
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10, marginBottom: 16 }}>
+              {cards.map(card => (
+                <div
+                  key={card.label}
+                  className="overview-card"
+                  onClick={() => openKpiModal(card.label, card.kpiKey)}
+                  style={{ borderTop: `3px solid ${card.color}`, padding: '12px 14px', cursor: 'pointer' }}
+                >
+                  <div className="overview-card-label" style={{ fontSize: 10, marginBottom: 6 }}>{card.label}</div>
+                  <div className="overview-card-value" style={{ color: card.color, fontSize: 24, lineHeight: 1.1 }}>{card.value}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.3 }}>{card.meta}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         <FinanceiroModule financeWeeks={financeWeeksForModule} filtered={filtered} kpis={kpis} filters={filters} showTargets={filters.severity !== ''} plan="PRO" />
       </>)}
       {/* ===== AGENDA / OTIMIZAÇÃO ===== */}
@@ -556,11 +773,15 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
           const periodMult    = periodDays / 30;
           const costP1Scaled  = 2000 * periodMult;
           const costP3Scaled  = 5000 * periodMult;
-          const topChannel    = (() => {
+          const channelCounts = (() => {
             const counts = new Map<string, number>();
             filtered.forEach(a => counts.set(a.channel, (counts.get(a.channel) ?? 0) + 1));
-            return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
+            return counts;
           })();
+          const topChannel = Array.from(channelCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+          const activeChannel = filters.channel
+            ? [filters.channel, channelCounts.get(filters.channel) ?? 0] as [string, number]
+            : topChannel;
 
           const cards = [
             {
@@ -606,10 +827,12 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
               meta: 'Total agendado no período',
             },
             {
-              label: 'Canal de Aquisição (Top)',
-              value: topChannel ? topChannel[0] : '—',
+              label: filters.channel ? `Canal: ${filters.channel}` : 'Canal de Aquisição',
+              value: filters.channel
+                ? activeChannel ? `${activeChannel[0]} / ${activeChannel[1]}` : '—'
+                : `Todos / ${kpis.total}`,
               color: G,
-              meta: topChannel ? `${topChannel[1]} agendamentos pelo canal principal` : 'Sem dados',
+              meta: filters.channel ? 'Agendamentos no canal filtrado' : 'Total de agendamentos (todos os canais)',
             },
             {
               label: 'Lead Time do Agendamento',
@@ -636,12 +859,64 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       {/* ===== MARKETING / UNIT ECONOMICS ===== */}
       {activeTab === 3 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Marketing & Captação</h2></div>
-        <div className="overview-row">
-          <div className="overview-card"><div className="overview-card-label">Leads</div><div className="overview-card-value">{marketingProWeeks[marketingProWeeks.length-1]?.leadsTotal ?? 0}</div></div>
-          <div className="overview-card"><div className="overview-card-label">{moneyTitle('CAC Médio')}</div><div className="overview-card-value" style={{color:'var(--green)'}}>{fmt(marketingChannelStats.reduce((s,r)=>s+r.cac,0)/Math.max(1,marketingChannelStats.length))}</div></div>
-          <div className="overview-card"><div className="overview-card-label">{moneyTitle('LTV Médio')}</div><div className="overview-card-value">{fmt(marketingChannelStats.reduce((s,r)=>s+r.ltv,0)/Math.max(1,marketingChannelStats.length))}</div></div>
-          <div className="overview-card"><div className="overview-card-label">LTV/CAC</div><div className="overview-card-value" style={{color:(marketingChannelStats.reduce((s,r)=>s+r.ltvCac,0)/Math.max(1,marketingChannelStats.length))>=3?'var(--green)':'var(--yellow)'}}>{(marketingChannelStats.reduce((s,r)=>s+r.ltvCac,0)/Math.max(1,marketingChannelStats.length)).toFixed(1)}x</div></div>
-        </div>
+        {(() => {
+          const G = 'var(--green)', Y = 'var(--yellow)', R = 'var(--red)';
+          const n           = Math.max(1, marketingChannelStats.length);
+          const totalLeads  = marketingChannelStats.reduce((s, c) => s + c.leads,       0);
+          const totalSpend  = marketingChannelStats.reduce((s, c) => s + c.spend,       0);
+          const totalBooked = marketingChannelStats.reduce((s, c) => s + c.booked,      0);
+          const totalAttend = marketingChannelStats.reduce((s, c) => s + c.attended,    0);
+          const totalNew    = marketingChannelStats.reduce((s, c) => s + c.newPatients, 0);
+          // Weighted averages (spec: CPL = Σspend/Σleads; CAC = Σspend/Σnew; ROI = weighted by investment)
+          const cpl       = totalLeads > 0 ? totalSpend / totalLeads : 0;
+          const convAgend = totalLeads > 0 ? (totalBooked / totalLeads) * 100 : 0;
+          const convConsul = totalLeads > 0 ? (totalAttend / totalLeads) * 100 : 0;
+          // CAC: simple average of per-channel values from marketingChannelStats.
+          // When filtered, marketingChannelStats already contains only the active channel(s).
+          const cacList = marketingChannelStats.map(c => c.cac).filter(v => v > 0);
+          const avgCAC  = cacList.length > 0
+            ? cacList.reduce((s, v) => s + v, 0) / cacList.length
+            : 0;
+          const avgROI    = marketingChannelStats.reduce((s, c) => s + c.roi, 0) / n;
+          const validLtv  = marketingChannelStats.filter(c => c.cac > 0);
+          const avgLtvCac = validLtv.length > 0 ? validLtv.reduce((s, c) => s + c.ltvCac, 0) / validLtv.length : 0;
+          const topChannel = [...marketingChannelStats].sort((a, b) => b.leads - a.leads)[0];
+
+          // Filter state — responds to both Canal and Profissionais filters
+          const isFiltered  = !!(filters.channel || filters.professional);
+          const filterLabel = filters.channel && filters.professional
+            ? `${filters.channel} · ${filters.professional}`
+            : filters.channel || filters.professional || '';
+          const hasChData   = !isFiltered || marketingChannelStats.length > 0;
+
+          const mkCards = [
+            { label: 'Leads Gerados',                    value: String(totalLeads),           color: totalLeads > 0 ? G : Y,              meta: topChannel ? `Top canal: ${topChannel.name} (${topChannel.leads})` : 'Sem dados', isLeads: true,  hasData: true },
+            { label: 'Custo por Lead (CPL)',              value: fmt(cpl),                     color: cpl < 50 ? G : cpl < 120 ? Y : R,   meta: 'P1 < R$50 | P2 R$50–120 | P3 > R$120',    isLeads: false, hasData: hasChData },
+            { label: 'Conversão Lead → Agendamento (%)', value: `${convAgend.toFixed(1)}%`,   color: convAgend >= 40 ? G : convAgend >= 25 ? Y : R,  meta: 'P1 ≥ 40% | P2 25–40% | P3 < 25%',   isLeads: false, hasData: hasChData },
+            { label: 'Conversão Lead → Consulta (%)',    value: `${convConsul.toFixed(1)}%`,  color: convConsul >= 30 ? G : convConsul >= 15 ? Y : R, meta: 'P1 ≥ 30% | P2 15–30% | P3 < 15%',   isLeads: false, hasData: hasChData },
+            { label: 'CAC por Canal',                    value: fmt(avgCAC),                  color: avgCAC < 100 ? G : avgCAC < 250 ? Y : R,        meta: 'P1 < R$100 | P2 R$100–250 | P3 > R$250', isLeads: false, hasData: hasChData },
+            { label: 'ROI por Canal (%)',                value: `${avgROI.toFixed(0)}%`,      color: avgROI >= 200 ? G : avgROI >= 100 ? Y : R,      meta: 'P1 ≥ 200% | P2 100–200% | P3 < 100%', isLeads: false, hasData: hasChData },
+            { label: 'LTV / CAC (ratio)',                value: `${avgLtvCac.toFixed(1)}x`,   color: avgLtvCac >= 3 ? G : avgLtvCac >= 1.5 ? Y : R,  meta: 'P1 ≥ 3x | P2 1,5–3x | P3 < 1,5x',   isLeads: false, hasData: hasChData },
+          ];
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10, marginBottom: 16 }}>
+              {mkCards.map(card => (
+                <MkCard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                  meta={card.meta}
+                  color={card.color}
+                  isFiltered={isFiltered}
+                  filterLabel={filterLabel}
+                  hasData={card.hasData}
+                  isLeads={card.isLeads}
+                  onClick={() => openKpiModal(card.label, card.label.toLowerCase().replace(/[^a-z]/g, '').slice(0, 8))}
+                />
+              ))}
+            </div>
+          );
+        })()}
         <MarketingModule weeklyData={weeklyTrend} filtered={filtered} kpis={kpis} filters={filters} showTargets={filters.severity !== ''} plan="PRO" />
       </>)}
       {/* ===== INTEGRAÇÕES ===== */}
@@ -675,106 +950,299 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
       {/* ===== OPERAÇÃO & UX ===== */}
       {activeTab === 4 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Operação & UX</h2></div>
-        <div className="overview-row">
-          <div className="overview-card"><div className="overview-card-label">NPS</div><div className="overview-card-value" style={{color:kpis.avgNPS>=8?'var(--green)':'var(--yellow)'}}>{kpis.avgNPS.toFixed(1)}</div></div>
-          <div className="overview-card"><div className="overview-card-label">Espera</div><div className="overview-card-value">{kpis.avgWait.toFixed(0)} min</div></div>
-          <div className="overview-card"><div className="overview-card-label">Retorno 90d</div><div className="overview-card-value">{(opsProByProfessional.reduce((s,r)=>s+r.return90,0)/Math.max(1,opsProByProfessional.length)).toFixed(1)}%</div></div>
-          <div className="overview-card"><div className="overview-card-label">SLA Lead</div><div className="overview-card-value">{(receptionSLARanking.reduce((s,r)=>s+r.slaH,0)/Math.max(1,receptionSLARanking.length)).toFixed(1)}h</div></div>
-        </div>
-        <OperacaoUXModule opsWeeks={agendaWeeksForModule} filtered={filtered} kpis={kpis} byProf={byProf} filters={filters} showTargets={filters.severity !== ''} plan="PRO" />
+        {(() => {
+          const G = 'var(--green)', Y = 'var(--yellow)', R = 'var(--red)';
+
+          // Professional filter state (uses NoCanal data — canal filter must not affect these)
+          const profFilter   = filters.professional;
+          const profData     = profFilter ? byProfNoCanal.find(p => p.name === profFilter) ?? null : null;
+          const opsProData   = profFilter ? opsProByProfessional.find(p => p.name === profFilter) ?? null : null;
+          const isProfFilt   = !!profFilter;
+          const profLabel    = profFilter || '';
+
+          // Procedure filter state (uses NoCanal data)
+          const procFilter    = filters.procedure;
+          const procData      = procFilter ? byProcNoCanal.find(p => p.name === procFilter) ?? null : null;
+          const isProcFilt    = !!procFilter;
+          const validProcs    = byProcNoCanal.filter(p => p.grossRevenue > 0);
+          const avgProcMargin = validProcs.length > 0
+            ? validProcs.reduce((s, p) => s + p.margin, 0) / validProcs.length
+            : kpisNoCanal.margin;
+
+          // Margem por Profissional (uses NoCanal data)
+          const validProfs    = byProfNoCanal.filter(p => p.grossRevenue > 0);
+          const avgProfMargin = validProfs.length > 0
+            ? validProfs.reduce((s, p) => s + p.margin, 0) / validProfs.length
+            : kpisNoCanal.margin;
+
+          // Canal filter state — SLA Lead responds ONLY to this
+          // kpis (canal-filtered) gives the selected channel's SLA directly
+          const canalFilter = filters.channel;
+          const isCanalFilt = !!canalFilter;
+
+          // Resolved values — all use kpisNoCanal except slaNum
+          const npsNum        = isProfFilt && profData   ? profData.avgNPS         : kpisNoCanal.avgNPS;
+          const waitNum       = isProfFilt && opsProData ? opsProData.waitByDoctor  : kpisNoCanal.avgWait;
+          const returnNum     = isProfFilt && opsProData ? opsProData.return90      : kpisNoCanal.returnRate;
+          const slaNum        = isCanalFilt ? kpis.slaLeadHours                    : kpisNoCanal.slaLeadHours;
+          const profMarginNum = isProfFilt && profData   ? profData.margin          : avgProfMargin;
+          const procMarginNum = isProcFilt && procData   ? procData.margin          : avgProcMargin;
+
+          const opsCards = [
+            {
+              label:      isProfFilt ? `NPS — ${profFilter}` : 'NPS Geral',
+              value:      npsNum.toFixed(1),
+              color:      npsNum >= 8.5 ? G : npsNum >= 7 ? Y : R,
+              meta:       'P1 ≥ 9 | P2 7–9 | P3 < 7',
+              isFiltered: isProfFilt,
+              filterLabel: profLabel,
+              hasData:    !isProfFilt || !!profData,
+              isLeads:    false,
+            },
+            {
+              label:      'Espera Média',
+              value:      `${waitNum.toFixed(0)} min`,
+              color:      waitNum <= 12 ? G : waitNum <= 20 ? Y : R,
+              meta:       'P1 ≤ 12 min | P2 12–20 | P3 > 20',
+              isFiltered: isProfFilt,
+              filterLabel: profLabel,
+              hasData:    !isProfFilt || !!opsProData,
+              isLeads:    false,
+            },
+            {
+              label:      'Taxa de Retorno',
+              value:      `${returnNum.toFixed(1)}%`,
+              color:      returnNum >= 40 ? G : returnNum >= 25 ? Y : R,
+              meta:       'P1 ≥ 40% | P2 25–40% | P3 < 25%',
+              isFiltered: isProfFilt,
+              filterLabel: profLabel,
+              hasData:    !isProfFilt || !!opsProData,
+              isLeads:    false,
+            },
+            {
+              label:      isCanalFilt ? `SLA Lead — ${canalFilter}` : 'SLA Lead (h)',
+              value:      `${slaNum.toFixed(2)}h`,
+              color:      slaNum <= 1 ? G : slaNum <= 2 ? Y : R,
+              meta:       'P1 ≤ 1h | P2 1–2h | P3 > 2h',
+              isFiltered: isCanalFilt,
+              filterLabel: canalFilter || '',
+              hasData:    true,
+              isLeads:    false,
+            },
+            {
+              label:      isProfFilt ? `Margem — ${profFilter}` : 'Margem por Profissional',
+              value:      `${profMarginNum.toFixed(1)}%`,
+              color:      profMarginNum >= 20 ? G : profMarginNum >= 10 ? Y : R,
+              meta:       'P1 ≥ 20% | P2 10–20% | P3 < 10%',
+              isFiltered: isProfFilt,
+              filterLabel: profLabel,
+              hasData:    !isProfFilt || !!profData,
+              isLeads:    false,
+            },
+            {
+              label:      isProcFilt ? `Margem — ${procFilter}` : 'Margem por Procedimento',
+              value:      `${procMarginNum.toFixed(1)}%`,
+              color:      procMarginNum >= 20 ? G : procMarginNum >= 10 ? Y : R,
+              meta:       'P1 ≥ 20% | P2 10–20% | P3 < 10%',
+              isFiltered: isProcFilt,
+              filterLabel: procFilter || '',
+              hasData:    !isProcFilt || !!procData,
+              isLeads:    false,
+            },
+          ];
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10, marginBottom: 16 }}>
+              {opsCards.map(card => (
+                <MkCard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                  meta={card.meta}
+                  color={card.color}
+                  isFiltered={card.isFiltered}
+                  filterLabel={card.filterLabel}
+                  hasData={card.hasData}
+                  isLeads={card.isLeads}
+                />
+              ))}
+            </div>
+          );
+        })()}
+        <OperacaoUXModule opsWeeks={agendaWeeksForModule} filtered={filtered} kpis={kpis} byProf={byProf} byProcAll={byProcAll} byChannelAll={byChannelNoCanal} opsProByProfessional={opsProByProfessional} filters={filters} showTargets={filters.severity !== ''} plan="PRO" />
       </>)}
       {/* ===== CORPO CLÍNICO ===== */}
       {activeTab === 5 && (<>
         <div className="section-header"><h2><span className="orange-bar" /> Corpo Clínico</h2></div>
-        <div className="chart-card" style={{ marginBottom: 16 }}>
+        <div className="chart-card" style={{ marginBottom: 16, minHeight: 'unset' }}>
           <div className="chart-card-header">
-            <span className="chart-card-title">Adicionar membro da equipe</span>
+            <span className="chart-card-title">Corpo Clínico</span>
             <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Cadastro manual para compor tabela e rankings</span>
           </div>
-          <div className="chart-card-body" style={{ padding: 16 }}>
-            <div className="form-grid-4">
-              {[
-                { key: 'name', label: 'Nome', placeholder: 'Ex.: Dra. Paula' },
-                { key: 'role', label: 'Area / funcao', placeholder: 'Ex.: Recepcao' },
-                { key: 'realized', label: 'Consultas', placeholder: '92' },
-                { key: 'grossRevenue', label: 'Receita', placeholder: '60600' },
-                { key: 'avgTicket', label: 'Ticket medio', placeholder: '659' },
-                { key: 'avgNPS', label: 'NPS', placeholder: '8.1' },
-                { key: 'noShowRate', label: 'No-show %', placeholder: '9.4' },
-                { key: 'occupancyRate', label: 'Ocupacao %', placeholder: '64.2' },
-                { key: 'avgWait', label: 'Espera min', placeholder: '18' },
-              ].map((field) => (
-                <label key={field.key} style={{ display: 'grid', gap: 6, color: 'var(--text-secondary)', fontSize: 12 }}>
+          <div className="chart-card-body" style={{ padding: '14px 16px', minHeight: 'unset' }}>
+            {/* Row 1: Nome + Área + button */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              {([
+                { key: 'name' as const, label: 'Nome', placeholder: 'Ex.: Dra. Paula' },
+                { key: 'role' as const, label: 'Área / função', placeholder: 'Ex.: Recepção' },
+              ]).map((field) => (
+                <label key={field.key} style={{ flex: 1, minWidth: 160, display: 'grid', gap: 5, color: 'var(--text-secondary)', fontSize: 12 }}>
                   <span>{field.label}</span>
                   <input
-                    value={teamMemberForm[field.key as keyof TeamMemberForm]}
-                    onChange={(event) => handleTeamMemberFormChange(field.key as keyof TeamMemberForm, event.target.value)}
+                    value={teamMemberForm[field.key]}
+                    onChange={(e) => handleTeamMemberFormChange(field.key, e.target.value)}
                     placeholder={field.placeholder}
                     style={{
-                      width: '100%',
-                      borderRadius: 12,
-                      border: '1px solid rgba(249, 115, 22, 0.18)',
-                      background: 'rgba(15, 23, 42, 0.55)',
-                      color: 'var(--text-primary)',
-                      padding: '10px 12px',
-                      outline: 'none',
+                      width: '100%', borderRadius: 10,
+                      border: '1px solid rgba(249,115,22,0.2)',
+                      background: 'rgba(15,23,42,0.55)',
+                      color: 'var(--text-primary)', padding: '9px 12px', outline: 'none', fontSize: 13,
                     }}
                   />
                 </label>
               ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                Os dados adicionados aqui entram na tabela e nos gráficos desta aba.
-              </span>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 8, paddingBottom: 1 }}>
                 {(editingManualTeamMemberIndex !== null || editingBaseTeamMemberName !== null) && (
-                  <button
-                    type="button"
-                    onClick={handleCancelTeamMemberEdit}
-                    style={{
-                      border: '1px solid rgba(148, 163, 184, 0.24)',
-                      borderRadius: 999,
-                      background: 'transparent',
-                      color: 'var(--text-primary)',
-                      fontWeight: 600,
-                      padding: '10px 16px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cancelar
-                  </button>
+                  <button type="button" onClick={handleCancelTeamMemberEdit} style={{
+                    border: '1px solid rgba(148,163,184,0.24)', borderRadius: 999,
+                    background: 'transparent', color: 'var(--text-primary)',
+                    fontWeight: 600, padding: '9px 16px', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap',
+                  }}>Cancelar</button>
                 )}
-                <button
-                  type="button"
-                  onClick={handleAddTeamMember}
-                  style={{
-                    border: 'none',
-                    borderRadius: 999,
-                    background: '#f97316',
-                    color: '#111827',
-                    fontWeight: 700,
-                    padding: '10px 16px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {(editingManualTeamMemberIndex !== null || editingBaseTeamMemberName !== null) ? 'Salvar alterações' : 'Adicionar membro'}
+                <button type="button" onClick={handleAddTeamMember} style={{
+                  border: 'none', borderRadius: 999, background: '#f97316',
+                  color: '#111827', fontWeight: 700, padding: '9px 20px', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap',
+                }}>
+                  {(editingManualTeamMemberIndex !== null || editingBaseTeamMemberName !== null) ? 'Salvar alterações' : '+ Adicionar membro'}
                 </button>
+              </div>
+            </div>
+
+            {/* Row 2: Metas individuais */}
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                Metas individuais
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+                {([
+                  { key: 'consultas' as const, label: 'Consultas',  placeholder: 'ex: 100',  unit: '' },
+                  { key: 'receita'   as const, label: 'Receita',    placeholder: 'ex: 80000', unit: 'R$' },
+                  { key: 'nps'       as const, label: 'NPS',        placeholder: 'ex: 8.5',  unit: '/10' },
+                  { key: 'noShow'    as const, label: 'No-show %',  placeholder: 'ex: 8',    unit: '%' },
+                  { key: 'ocupacao'  as const, label: 'Ocupação %', placeholder: 'ex: 75',   unit: '%' },
+                  { key: 'espera'    as const, label: 'Espera min', placeholder: 'ex: 12',   unit: 'min' },
+                ]).map(f => (
+                  <label key={f.key} style={{ display: 'grid', gap: 4, color: 'var(--text-secondary)', fontSize: 12 }}>
+                    <span>{f.label}</span>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number"
+                        value={teamMemberForm.goals[f.key]}
+                        onChange={e => handleGoalChange(f.key, e.target.value)}
+                        placeholder={f.placeholder}
+                        style={{
+                          width: '100%', borderRadius: 10,
+                          border: '1px solid rgba(99,102,241,0.2)',
+                          background: 'rgba(15,23,42,0.45)',
+                          color: 'var(--text-primary)', padding: '8px 32px 8px 10px', outline: 'none', fontSize: 12,
+                        }}
+                      />
+                      {f.unit && (
+                        <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-muted)', pointerEvents: 'none' }}>{f.unit}</span>
+                      )}
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
           </div>
         </div>
-        <div className="detail-section"><div className="detail-section-header">👥 Performance da Equipe</div><div className="detail-section-body"><table className="data-table"><thead><tr><th>Profissional</th><th>Consultas</th><th>Receita</th><th>{ lang === "EN" ? "Avg Ticket" : lang === "ES" ? "Ticket Promedio" : "Ticket Médio" }</th><th>NPS</th><th>No-Show</th><th>Ocupação</th><th>Espera</th></tr></thead><tbody>
-          {displayedTeamMembers.map((p, idx)=>{ const visibleBaseCount = displayedTeamMembers.length - manualTeamMembers.length; const isManual = idx >= visibleBaseCount; const manualIndex = idx - visibleBaseCount; return <tr key={`${p.name}-${idx}`} style={{cursor:'default'}}><td style={{fontWeight:600}}>{p.name}</td><td>{p.realized}</td><td>{fmt(p.grossRevenue)}</td><td>{fmt(p.avgTicket)}</td><td style={{color:p.avgNPS>=8?'var(--green)':'var(--yellow)',fontWeight:700}}>{p.avgNPS.toFixed(1)}</td><td style={{color:p.noShowRate<=10?'var(--green)':'var(--red)',fontWeight:700}}>{p.noShowRate.toFixed(1)}%</td><td>{p.occupancyRate.toFixed(1)}%</td><td>{p.avgWait.toFixed(0)} min</td><td><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" onClick={(event)=>{event.stopPropagation(); if (isManual) { handleEditManualTeamMember(manualIndex); } else { handleEditBaseTeamMember(p.name); }}} style={{border:'1px solid rgba(59,130,246,0.28)',borderRadius:999,background:'transparent',color:'#3b82f6',padding:'6px 10px',cursor:'pointer',fontSize:11,fontWeight:700}}>Editar</button><button type="button" onClick={(event)=>{event.stopPropagation(); if (isManual) { handleDeleteManualTeamMember(manualIndex); } else { handleDeleteBaseTeamMember(p.name); }}} style={{border:'1px solid rgba(239,68,68,0.28)',borderRadius:999,background:'transparent',color:'#ef4444',padding:'6px 10px',cursor:'pointer',fontSize:11,fontWeight:700}}>Excluir</button></div></td></tr>; })}
-        </tbody></table></div></div>
-        <div className="chart-grid">
-          <div className="chart-card"><div className="chart-card-header"><span className="chart-card-title">Ranking Receita</span><span style={{fontSize:10,color:'var(--text-muted)'}}>👆 Clique</span></div><div className="chart-card-body">
-            <ReactApexChart options={{...ct,chart:{...ct.chart,type:'bar'},plotOptions:{bar:{horizontal:true,distributed:true}},colors:displayedTeamMembers.map((_, idx)=>['#ff5a1f','#45a29e','#3b82f6','#22c55e','#f59e0b','#8b5cf6'][idx % 6]),xaxis:{...ct.xaxis,categories:displayedTeamMembers.map(p=>p.name)},legend:{show:false}}} series={[{name:'Receita',data:displayedTeamMembers.map(p=>Math.round(p.grossRevenue))}]} type="bar" height={200}/>
-          </div></div>
-          <div className="chart-card"><div className="chart-card-header"><span className="chart-card-title">Ranking NPS</span></div><div className="chart-card-body">
-            <ReactApexChart options={{...ct,chart:{...ct.chart,type:'bar'},plotOptions:{bar:{horizontal:true,distributed:true}},colors:displayedTeamMembers.map((p)=>p.avgNPS>=8?'#22c55e':p.avgNPS>=7.5?'#eab308':'#ef4444'),xaxis:{...ct.xaxis,categories:displayedTeamMembers.map(p=>p.name)},legend:{show:false}}} series={[{name:'NPS',data:displayedTeamMembers.map(p=>+p.avgNPS.toFixed(1))}]} type="bar" height={200}/>
-          </div></div>
-        </div>
+
+        {(() => {
+          const goalCell = (actual: string, goal: string, goodWhenHigh = true) => {
+            if (!goal) return <span>{actual}</span>;
+            const a = parseFloat(actual.replace(/[^\d.]/g,''));
+            const g = parseFloat(goal);
+            const ok = goodWhenHigh ? a >= g : a <= g;
+            return (
+              <span>
+                <span style={{ fontWeight: 700, color: ok ? 'var(--green)' : 'var(--red)' }}>{actual}</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginTop: 1 }}>meta: {goal}</span>
+              </span>
+            );
+          };
+          return (
+            <div className="detail-section"><div className="detail-section-header">👥 Performance da Equipe</div><div className="detail-section-body"><table className="data-table"><thead><tr><th>Profissional</th><th>Consultas</th><th>Receita</th><th>NPS</th><th>No-Show</th><th>Ocupação</th><th>Espera</th></tr></thead><tbody>
+              {displayedTeamMembers.map((p, idx) => {
+                const g = memberGoals[p.name];
+                return (
+                  <tr key={`${p.name}-${idx}`} style={{cursor:'default'}}>
+                    <td style={{fontWeight:600}}>{p.name}</td>
+                    <td>{g ? goalCell(String(p.realized), g.consultas, true) : p.realized}</td>
+                    <td>{g ? goalCell(fmt(p.grossRevenue), g.receita ? fmt(Number(g.receita)) : '', true) : fmt(p.grossRevenue)}</td>
+                    <td style={{color:p.avgNPS>=8?'var(--green)':'var(--yellow)',fontWeight:700}}>{g ? goalCell(p.avgNPS.toFixed(1), g.nps, true) : p.avgNPS.toFixed(1)}</td>
+                    <td style={{color:p.noShowRate<=10?'var(--green)':'var(--red)',fontWeight:700}}>{g ? goalCell(p.noShowRate.toFixed(1)+'%', g.noShow ? g.noShow+'%' : '', false) : p.noShowRate.toFixed(1)+'%'}</td>
+                    <td>{g ? goalCell(p.occupancyRate.toFixed(1)+'%', g.ocupacao ? g.ocupacao+'%' : '', true) : p.occupancyRate.toFixed(1)+'%'}</td>
+                    <td>{g ? goalCell(p.avgWait.toFixed(0)+' min', g.espera ? g.espera+' min' : '', false) : p.avgWait.toFixed(0)+' min'}</td>
+                  </tr>
+                );
+              })}
+            </tbody></table></div></div>
+          );
+        })()}
+        {(() => {
+          const byRevenue = [...displayedTeamMembers].sort((a,b) => a.grossRevenue - b.grossRevenue);
+          const byNPS     = [...displayedTeamMembers].sort((a,b) => a.avgNPS - b.avgNPS);
+          const revenueColors = byRevenue.map((_, i) => {
+            const pct = byRevenue.length > 1 ? i / (byRevenue.length - 1) : 1;
+            return pct < 0.4 ? '#ef4444' : pct < 0.75 ? '#f59e0b' : '#22c55e';
+          });
+          const npsColors = byNPS.map(p => p.avgNPS >= 8.5 ? '#22c55e' : p.avgNPS >= 7.5 ? '#f59e0b' : '#ef4444');
+          const barOpts = {
+            ...ct,
+            chart: { ...ct.chart, type: 'bar' as const, toolbar: { show: false } },
+            plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '55%' } },
+            legend: { show: false },
+            grid: { borderColor: 'rgba(255,255,255,0.05)', xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
+            tooltip: { theme: 'dark' },
+          };
+          return (
+            <div className="chart-grid">
+              <div className="chart-card">
+                <div className="chart-card-header"><span className="chart-card-title">Ranking Receita</span><span style={{fontSize:10,color:'var(--text-muted)'}}>menor → maior</span></div>
+                <div className="chart-card-body">
+                  <ReactApexChart
+                    options={{...barOpts, colors: revenueColors,
+                      xaxis: { ...ct.xaxis, categories: byRevenue.map(p=>p.name) },
+                      yaxis: { labels: { style: { colors: '#9ca3af', fontSize: '12px' } } },
+                      dataLabels: { enabled: true, formatter: (v: number) => `R$ ${(v/1000).toFixed(0)}k`, style: { fontSize: '11px', colors: ['#fff'] } },
+                    }}
+                    series={[{name:'Receita', data: byRevenue.map(p=>Math.round(p.grossRevenue))}]}
+                    type="bar" height={Math.max(160, byRevenue.length * 48)}
+                  />
+                </div>
+              </div>
+              <div className="chart-card">
+                <div className="chart-card-header"><span className="chart-card-title">Ranking NPS</span><span style={{fontSize:10,color:'var(--text-muted)'}}>menor → maior</span></div>
+                <div className="chart-card-body">
+                  <ReactApexChart
+                    options={{...barOpts, colors: npsColors,
+                      xaxis: { ...ct.xaxis, categories: byNPS.map(p=>p.name), min: 0, max: 10 },
+                      yaxis: { labels: { style: { colors: '#9ca3af', fontSize: '12px' } } },
+                      dataLabels: { enabled: true, formatter: (v: number) => v.toFixed(1), style: { fontSize: '11px', colors: ['#fff'] } },
+                      annotations: { xaxis: [
+                        { x: 7.5, borderColor: '#f59e0b', strokeDashArray: 4, label: { text: '7.5', style: { color: '#f59e0b', background: 'transparent', fontSize: '10px' } } },
+                        { x: 8.5, borderColor: '#22c55e', strokeDashArray: 4, label: { text: '8.5', style: { color: '#22c55e', background: 'transparent', fontSize: '10px' } } },
+                      ]},
+                    }}
+                    series={[{name:'NPS', data: byNPS.map(p=>+p.avgNPS.toFixed(1))}]}
+                    type="bar" height={Math.max(160, byNPS.length * 48)}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </>)}
 
 
