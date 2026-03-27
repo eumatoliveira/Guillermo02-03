@@ -326,7 +326,23 @@ export function AIAssistantModule({ kpis, fmt }: Props): React.ReactElement | nu
     setStreamingId(assistantId);
     setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }]);
 
-    if (!apiKey) {
+    // If apiKey state is not yet populated (async decrypt race), try loading directly
+    let resolvedKey = apiKey;
+    if (!resolvedKey) {
+      resolvedKey = await _loadDecryptedApiKey();
+      if (resolvedKey) setApiKey(resolvedKey);
+    }
+
+    // If still no key, check if the backend query has a key we can use
+    if (!resolvedKey && aiCredentialQuery.data?.accessToken) {
+      resolvedKey = aiCredentialQuery.data.accessToken.trim();
+      if (resolvedKey) {
+        void saveStoredApiKey(STORAGE_KEY_APIKEY, resolvedKey);
+        setApiKey(resolvedKey);
+      }
+    }
+
+    if (!resolvedKey) {
       const normalized = text.trim().toLowerCase();
       const localReply = [
         'Resumo rapido da clinica:',
@@ -365,7 +381,7 @@ export function AIAssistantModule({ kpis, fmt }: Props): React.ReactElement | nu
         method: 'POST',
         signal: abort.signal,
         headers: {
-          'x-api-key': apiKey,
+          'x-api-key': resolvedKey,
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
           'anthropic-dangerous-direct-browser-access': 'true',
@@ -417,7 +433,7 @@ export function AIAssistantModule({ kpis, fmt }: Props): React.ReactElement | nu
       setStreamingId(null);
       abortRef.current = null;
     }
-  }, [apiKey, isStreaming, kpis, fmt, facts, messages]);
+  }, [apiKey, aiCredentialQuery.data, isStreaming, kpis, fmt, facts, messages]);
 
   const addFact = useCallback(() => {
     if (!newLabel.trim() || !newValue.trim()) return;

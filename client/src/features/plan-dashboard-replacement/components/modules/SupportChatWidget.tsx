@@ -702,8 +702,14 @@ export function SupportChatWidget({ theme: _theme, appointments, filters, active
     setInput('');
     setActiveNav('conversas');
 
-    const apiKey = localStorage.getItem(CLAUDE_API_KEY_STORAGE) ?? '';
-    if (!apiKey) {
+    let storedKey = localStorage.getItem(CLAUDE_API_KEY_STORAGE) ?? '';
+    // If localStorage is empty but backend returned the key, sync it now
+    if (!storedKey && aiCredentialQuery.data?.accessToken?.trim()) {
+      const remoteKey = aiCredentialQuery.data.accessToken.trim();
+      void saveStoredApiKey(CLAUDE_API_KEY_STORAGE, remoteKey);
+      storedKey = remoteKey; // callClaudeStream will read from localStorage after this
+    }
+    if (!storedKey) {
       updateConversation(activeConversation.id, nextMessages.map(m =>
         m.id === assistantId ? { ...m, content: buildSupportReply(fullText, appointments, filters, activePlan, kpiSourceMode) } : m
       ));
@@ -800,8 +806,13 @@ Plano ativo: ${activePlan ?? 'ESSENTIAL'} | Fonte: ${kpiSourceMode ?? 'fallback'
     setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, messages: [...p.messages, userMsg, placeholder], updatedAt: nowIso() } : p));
     setProjectInput('');
 
-    const apiKey = localStorage.getItem(CLAUDE_API_KEY_STORAGE) ?? '';
-    if (!apiKey) {
+    let storedKeyProj = localStorage.getItem(CLAUDE_API_KEY_STORAGE) ?? '';
+    if (!storedKeyProj && aiCredentialQuery.data?.accessToken?.trim()) {
+      const remoteKey = aiCredentialQuery.data.accessToken.trim();
+      void saveStoredApiKey(CLAUDE_API_KEY_STORAGE, remoteKey);
+      storedKeyProj = remoteKey;
+    }
+    if (!storedKeyProj) {
       setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, messages: p.messages.map(m => m.id === assistantId ? { ...m, content: buildProjectReply(trimmed, proj) } : m) } : p));
       return;
     }
