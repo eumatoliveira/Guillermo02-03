@@ -566,7 +566,7 @@ function ProDashboard({ activeTab, theme, visualScale, filters, onFiltersChange,
         const totalSpend   = marketingChannelStats.reduce((s, c) => s + c.spend,   0);
         const totalRevenue = marketingChannelStats.reduce((s, c) => s + c.revenue, 0);
         const activeRoi    = totalSpend > 0 ? ((totalRevenue - totalSpend) / totalSpend) * 100 : 0;
-        const activeRoiLabel = 'Todos';
+        const activeRoiLabel = filters.channel || 'Todos';
         const roiColor = activeRoi >= 200 ? CL.green : activeRoi >= 100 ? CL.amber : CL.red;
         const roiLabel = `${activeRoi.toFixed(0)}% (${activeRoiLabel})`;
 
