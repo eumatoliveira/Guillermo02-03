@@ -5,7 +5,7 @@ describe("resolveKpiMeta", () => {
   it("resolves NPS metadata according to the PDF rule", () => {
     const meta = resolveKpiMeta("NPS Geral", "integrated");
 
-    expect(meta.formula).toContain("media das notas");
+    expect(meta.formula).toContain("Média das notas");
     expect(meta.sources[0]).toContain("Pesquisa NPS");
     expect(meta.fields).toContain("score");
   });
@@ -22,8 +22,8 @@ describe("resolveKpiMeta", () => {
     const meta = resolveKpiMeta("Break-even", "integrated");
 
     expect(meta.formula).toContain("Despesas Fixas Totais");
-    expect(meta.formula).toContain("Margem de Contribuicao");
-    expect(meta.note).toContain("contribuicao monetaria");
+    expect(meta.formula).toContain("Margem de Contribuição");
+    expect(meta.note).toContain("Contribuição monetária");
   });
 
   it("returns a generic explanation for unknown KPIs", () => {

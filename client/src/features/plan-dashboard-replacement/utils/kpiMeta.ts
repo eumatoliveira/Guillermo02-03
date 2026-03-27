@@ -39,8 +39,8 @@ function makeMeta(label: string, mode: KpiSourceMode): KpiMeta {
   if (key.includes("nps")) {
     return {
       label,
-      formula: "NPS Geral = Média das notas coletadas via formulário pós-consulta no período",
-      howToCalculate: "Some as notas válidas do período e divida pelo total de respostas válidas.",
+      formula: "NPS Geral = Média das notas coletadas no período (escala 0–10). Distinto do NPS clássico (Promotores − Detratores).",
+      howToCalculate: "Some as notas válidas do período e divida pelo total de respostas válidas. O resultado é a nota média de 0 a 10, não o NPS clássico de −100 a 100.",
       sources: sourceSet(mode, ["Pesquisa NPS / WhatsApp / formulário de satisfação", "Tabela de respostas NPS consolidada"]),
       fields: ["score", "responseAt", "unit"],
     };
@@ -250,6 +250,7 @@ function makeMeta(label: string, mode: KpiSourceMode): KpiMeta {
       howToCalculate: "Calcule a margem de contribuição média por atendimento, divida as despesas fixas por essa margem e compare com a receita atual.",
       sources: sourceSet(mode, ["Financeiro / ERP", "Custos variáveis e ticket médio"]),
       fields: ["fixedCosts", "avgTicket", "variableCosts", "competenceDate"],
+      note: "Break-even monetário = Despesas Fixas ÷ Margem de Contribuição monetária por atendimento (ticket − custos variáveis).",
     };
   }
 
@@ -383,6 +384,7 @@ function makeMeta(label: string, mode: KpiSourceMode): KpiMeta {
     howToCalculate: "Aplique os filtros ativos, identifique a base do indicador e consolide o valor segundo a regra de negócio definida para o módulo.",
     sources: sourceSet(mode, ["Control Tower / integrações conectadas ao cliente"]),
     fields: ["period", "unit", "channel", "professionalId"],
+    note: "Consulte a documentação do módulo para detalhes da fórmula específica deste indicador.",
   };
 }
 
