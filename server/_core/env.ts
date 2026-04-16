@@ -81,6 +81,9 @@ const defaultDevelopmentDemoUsers = [
 if (isProduction && !jwtSecret) {
   throw new Error("[ENV] Missing JWT_SECRET in production. Set JWT_SECRET before starting the server.");
 }
+if (isProduction && jwtSecret && jwtSecret.length < 32) {
+  throw new Error("[ENV] JWT_SECRET is too short. Use at least 32 characters in production.");
+}
 
 if (isProduction && !process.env.DATABASE_URL) {
   console.warn("[ENV] DATABASE_URL is not configured in production. Falling back to in-memory storage.");

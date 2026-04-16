@@ -1,48 +1,67 @@
-import { useQuery } from "@tanstack/react-query";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { GLX_ADMIN_BRIEFING_SPEC } from "@/lib/adminBriefingSpec";
-import { translateAdminDashboardText } from "@/lib/adminUiLocale";
-import { ADMIN_DASHBOARD_MOCK_DATA } from "@/features/admin-dashboard/mockData";
-import { useAdminDashboardStore, type AdminChartFilter } from "@/features/admin-dashboard/store/useAdminDashboardStore";
-import type { DashboardViewDefinition, DashboardViewId, KPIStatus } from "@/features/admin-dashboard/types";
+import { useEffect, useState } from "react";
+import type { DashboardViewId } from "../types";
+import { useAdminDashboardStore } from "../store/useAdminDashboardStore";
+import { ADMIN_DASHBOARD_MOCK_DATA } from "../mockData";
 
-type SummaryCard = {
-  id: string;
-  title: string;
-  value: string;
-  status: KPIStatus;
-  formula: string;
-  source: string;
-  thresholds: { green: string; yellow: string; red: string };
-};
+// ─── Tipos da API ─────────────────────────────────────────────────────────────
 
-type GenericRow = Record<string, string>;
+type ApiStatus = "verde" | "amarelo" | "vermelho" | "neutro";
 
-type ChartConfig = {
-  id: string;
-  title: string;
-  subtitle: string;
-  type: "bar" | "line" | "area" | "pie";
-  data: Array<Record<string, number | string>>;
-  dataKeys: string[];
-  colors: string[];
-};
+interface ApiKpi {
+  value: number | null;
+  status: ApiStatus;
+}
 
-type AlertItem = {
-  id: string;
-  title: string;
-  level: KPIStatus;
-  description: string;
-  action: string;
-  deadline: string;
-};
+interface ApiResponse {
+  visao_2_pipeline: Record<string, ApiKpi>;
+  visao_1_operacao: Record<string, ApiKpi>;
+}
 
-export type AdminDashboardViewData = {
+// ─── Tipo de saída do hook ────────────────────────────────────────────────────
+
+export interface AdminDashboardViewData {
   heading: string;
   question: string;
   explanation?: string;
-  chartLayout?: "generic" | "operation" | "pipeline";
-  pipelineView?: DashboardViewDefinition;
+  chartLayout: "pipeline" | "operation" | "generic";
+  metaCards: Array<{ label: string; value: string }>;
+  summaryCards: Array<{
+    id: string;
+    title: string;
+    value: string;
+    status: "green" | "yellow" | "red" | "neutral";
+    source: string;
+    formula: string;
+    thresholds: { green: string; yellow: string; red: string };
+  }>;
+  topCharts: Array<{
+    id: string;
+    title: string;
+    subtitle: string;
+    type: "line" | "area" | "bar" | "pie";
+    data: Array<Record<string, unknown>>;
+    dataKeys: string[];
+    colors: string[];
+  }>;
+  bottomCharts: Array<{
+    id: string;
+    title: string;
+    subtitle: string;
+    type: "line" | "area" | "bar" | "pie";
+    data: Array<Record<string, unknown>>;
+    dataKeys: string[];
+    colors: string[];
+  }>;
+  tableRows: Array<Record<string, unknown>>;
+  alerts: Array<{
+    id: string;
+    level: "green" | "yellow" | "red" | "neutral";
+    title: string;
+    description: string;
+    deadline: string;
+  }>;
+  pipelineView?: import("../types").DashboardViewDefinition;
+  pipelineApiKpis?: Record<string, { value: number | null; status: string }>;
   operationChartsData?: {
     mrrAtual: number;
     crescimentoMrrAtual: number;
@@ -53,547 +72,259 @@ export type AdminDashboardViewData = {
     slaAtual: number;
     npsAtual: number;
   };
-  summaryCards: SummaryCard[];
-  topCharts: ChartConfig[];
-  bottomCharts: ChartConfig[];
-  integrationGroups?: Array<{
-    module: string;
-    cadence: string;
-    sources: string[];
-    note: string;
-  }>;
-  tableTitle: string;
-  tableRows: GenericRow[];
-  alerts: AlertItem[];
-  metaCards: Array<{ label: string; value: string }>;
-  activeFilter?: string | null;
-};
-
-const STATUS_WEIGHT: Record<KPIStatus, number> = { green: 0, yellow: 1, red: 2 };
-
-function parseNumericValue(raw: string) {
-  const normalized = raw.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-  const value = Number.parseFloat(normalized || "0");
-  return raw.includes("mil") ? value * 1000 : value;
 }
 
-function getView(viewId: DashboardViewId) {
-  const view = ADMIN_DASHBOARD_MOCK_DATA.views.find((item) => item.id === viewId);
-  if (!view) throw new Error(`View ${viewId} nao encontrada`);
-  return view;
+// ─── Utilitários ─────────────────────────────────────────────────────────────
+
+// Usa o proxy interno — nunca expõe o servidor externo no bundle do browser
+const API_BASE = "/api/admin-dashboard";
+
+function mapStatus(s: ApiStatus): "green" | "yellow" | "red" | "neutral" {
+  if (s === "verde") return "green";
+  if (s === "amarelo") return "yellow";
+  if (s === "vermelho") return "red";
+  return "neutral";
 }
 
-function getSpecView(viewId: DashboardViewId) {
-  return GLX_ADMIN_BRIEFING_SPEC.views.find((item) => item.id === (viewId === "pipeline" ? "PIPELINE" : "OPERATION"));
+/** Retorna "Dados não entrados" quando value é null, ou formata o número */
+function formatValue(kpi: ApiKpi | undefined, unit: string): string {
+  if (!kpi || kpi.value === null || kpi.value === undefined) return "Dados não entrados";
+  const v = kpi.value;
+  if (unit === "R$") return `R$ ${v.toLocaleString("pt-BR")}`;
+  if (unit === "%") return `${v}%`;
+  if (unit === "score") return String(v);
+  if (unit === "dias") return `${v} dias`;
+  if (unit === "hrs") return `${v}h`;
+  return String(v);
 }
 
-function maybeFilterStatus<T extends { status: KPIStatus }>(items: T[], semaforo: string) {
-  if (semaforo === "ALL") return items;
-  return items.filter((item) => item.status === semaforo);
+/** Converte period do store para timestamps from/to em ms */
+function periodToRange(period: string): { from?: number; to?: number } {
+  const now = Date.now();
+  const day = 86_400_000;
+  if (period === "7d")   return { from: now - 7 * day, to: now };
+  if (period === "30d")  return { from: now - 30 * day, to: now };
+  if (period === "90d")  return { from: now - 90 * day, to: now };
+  if (period === "mtd") {
+    const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0);
+    return { from: d.getTime(), to: now };
+  }
+  if (period === "qtd") {
+    const d = new Date();
+    const q = Math.floor(d.getMonth() / 3);
+    d.setMonth(q * 3, 1); d.setHours(0, 0, 0, 0);
+    return { from: d.getTime(), to: now };
+  }
+  if (period === "ytd") {
+    const d = new Date(); d.setMonth(0, 1); d.setHours(0, 0, 0, 0);
+    return { from: d.getTime(), to: now };
+  }
+  if (period === "monthly") return { from: now - 30 * day, to: now };
+  if (period === "quarterly") return { from: now - 90 * day, to: now };
+  if (period === "semiannual") return { from: now - 180 * day, to: now };
+  return {};
 }
 
-function filterByProduct<T extends GenericRow>(rows: T[], product: string) {
-  if (product === "ALL") return rows;
-  return rows.filter((row) => (row.produto ?? "").toUpperCase() === product);
-}
+// ─── Mapeamento Pipeline ──────────────────────────────────────────────────────
 
-function pickSeriesWindow<T>(series: T[], period: string) {
-  if (period === "7d") return series.slice(-2);
-  if (period === "30d" || period === "mtd") return series.slice(-3);
-  if (period === "90d" || period === "qtd") return series.slice(-5);
-  if (period === "monthly") return series.slice(-6);
-  if (period === "quarterly") return series.slice(-3);
-  if (period === "semiannual") return series.slice(-6);
-  return series;
-}
+const PIPELINE_KPIS: Array<{ id: string; key: string; label: string; unit: string; source: string; formula: string }> = [
+  { id: "leads_totais_gerados",        key: "leads_totais_gerados",        label: "Leads Totais Gerados",           unit: "qty", source: "Pipedrive / LinkedIn",          formula: "Soma de todos os leads no período" },
+  { id: "leads_quentes",               key: "leads_quentes",               label: "Leads Quentes",                  unit: "qty", source: "Pipedrive",                     formula: "SQL Quente + SQL Morno" },
+  { id: "taxa_lead_lead_quente",       key: "taxa_lead_lead_quente",       label: "Taxa Lead → Lead Quente (%)",    unit: "%",   source: "Cálculo interno — Pipedrive",   formula: "Leads quentes ÷ Leads totais × 100" },
+  { id: "calls_de_qualificacao",       key: "calls_de_qualificacao",       label: "Calls de Qualificação",          unit: "qty", source: "Pipedrive / Google Calendar",   formula: "Calls de qualificação realizadas" },
+  { id: "taxa_lead_quente_call",       key: "taxa_lead_quente_call",       label: "Taxa Lead Quente → Call (%)",    unit: "%",   source: "Cálculo interno — Pipedrive",   formula: "Calls ÷ Leads quentes × 100" },
+  { id: "calls_de_fechamento",         key: "calls_de_fechamento",         label: "Calls de Fechamento",            unit: "qty", source: "Pipedrive / Google Calendar",   formula: "Calls de fechamento realizadas" },
+  { id: "taxa_qualif_fechamento",      key: "taxa_qualif_fechamento",      label: "Taxa Qualif → Fechamento (%)",   unit: "%",   source: "Cálculo interno",               formula: "Calls fechamento ÷ Calls qualif × 100" },
+  { id: "taxa_fechamento_contrato",    key: "taxa_fechamento_contrato",    label: "Taxa Fechamento → Contrato (%)", unit: "%",   source: "Cálculo interno",               formula: "Contratos ÷ Calls fechamento × 100" },
+  { id: "ciclo_medio_lead_contrato",   key: "ciclo_medio_lead_contrato",   label: "Ciclo Médio Lead → Contrato",    unit: "dias",source: "Pipedrive",                     formula: "Média de dias entre lead e contrato" },
+  { id: "diagnosticos_agendados_os",   key: "diagnosticos_agendados_os",   label: "Diagnósticos OS Agendados",      unit: "qty", source: "Pipedrive",                     formula: "Diagnósticos OS agendados no período" },
+  { id: "setups_fechados_os",          key: "setups_fechados_os",          label: "Setups OS Fechados",             unit: "qty", source: "Pipedrive",                     formula: "Setups OS fechados no período" },
+  { id: "taxa_diagnostico_setup",      key: "taxa_diagnostico_setup",      label: "Taxa Diagnóstico → Setup (%)",   unit: "%",   source: "Cálculo interno",               formula: "Setups ÷ Diagnósticos × 100" },
+  { id: "taxa_setup_mrr_12m",          key: "taxa_setup_mrr_12m",          label: "Taxa Setup → MRR 12m (%)",       unit: "%",   source: "Planilha de Contratos",         formula: "Setups convertidos em MRR 12m" },
+  { id: "os_start_ativos_mrr_12m",     key: "os_start_ativos_mrr_12m",     label: "OS Start Ativos MRR 12m (%)",    unit: "%",   source: "Planilha de Contratos",         formula: "OS Start ativos com MRR 12m" },
+  { id: "os_pro_ativos_mrr_12m",       key: "os_pro_ativos_mrr_12m",       label: "OS Pro Ativos MRR 12m (%)",      unit: "%",   source: "Planilha de Contratos",         formula: "OS Pro ativos com MRR 12m" },
+  { id: "advisory_fechados",           key: "advisory_fechados",           label: "Advisory Fechados",              unit: "qty", source: "Pipedrive",                     formula: "Contratos Advisory fechados" },
+  { id: "advisory_ativos_total",       key: "advisory_ativos_total",       label: "Advisory Ativos Total",          unit: "qty", source: "Pipedrive",                     formula: "Total de Advisory ativos" },
+  { id: "taxa_renovacao_advisory_6m",  key: "taxa_renovacao_advisory_6m",  label: "Taxa Renovação Advisory 6m (%)", unit: "%",   source: "Planilha de Contratos",         formula: "Renovações ÷ Vencimentos × 100" },
+  { id: "pipeline_ponderado_total",    key: "pipeline_ponderado_total",    label: "Pipeline Ponderado Total",       unit: "R$",  source: "Pipedrive",                     formula: "Σ(valor × probabilidade) por etapa" },
+  { id: "acv_valor_medio_contrato",    key: "acv_valor_medio_contrato",    label: "ACV — Valor Médio Contrato",     unit: "R$",  source: "Pipedrive",                     formula: "Receita anual ÷ contratos ativos" },
+  { id: "setups_em_andamento",         key: "setups_em_andamento",         label: "Setups em Andamento",            unit: "qty", source: "Pipedrive",                     formula: "Setups com status em andamento" },
+];
 
-function matchesPipelineFilter(row: GenericRow, chartFilter: AdminChartFilter | null) {
-  if (!chartFilter) return true;
-  if (chartFilter.dimension === "source") return (row.origem ?? "") === chartFilter.value;
-  if (chartFilter.dimension === "product") return (row.produto ?? "").toUpperCase() === chartFilter.value;
-  if (chartFilter.dimension === "stage") return (row.etapa ?? "") === chartFilter.value;
-  return true;
-}
+const OPERACAO_KPIS: Array<{ id: string; key: string; label: string; unit: string; source: string; formula: string }> = [
+  { id: "mrr_total",                 key: "mrr_total",                 label: "MRR Total",                      unit: "R$",   source: "Planilha de Contratos",   formula: "Σ(valor do plano × clientes ativos)" },
+  { id: "crescimento_mrr",           key: "crescimento_mrr",           label: "Crescimento MRR (%)",            unit: "%",    source: "Cálculo interno",         formula: "(MRR atual − MRR anterior) ÷ MRR anterior × 100" },
+  { id: "new_mrr",                   key: "new_mrr",                   label: "New MRR",                        unit: "R$",   source: "Pipedrive + Contratos",   formula: "Σ MRR de contratos novos no mês" },
+  { id: "churn_mrr",                 key: "churn_mrr",                 label: "Churn MRR",                      unit: "R$",   source: "Planilha de Contratos",   formula: "Σ MRR de clientes que cancelaram" },
+  { id: "forecast_mrr_3_meses",      key: "forecast_mrr_3_meses",      label: "Forecast MRR 3 meses",           unit: "R$",   source: "Pipedrive",               formula: "Pipeline ponderado + contratos vigentes" },
+  { id: "clientes_ativos",           key: "clientes_ativos",           label: "Clientes Ativos",                unit: "qty",  source: "Planilha de Contratos",   formula: "Clientes com contrato ativo" },
+  { id: "churn_rate",                key: "churn_rate",                label: "Churn Rate (%)",                 unit: "%",    source: "Cálculo interno",         formula: "Clientes cancelados ÷ Base ativa × 100" },
+  { id: "nps_de_clientes_glx",       key: "nps_de_clientes_glx",       label: "NPS de Clientes GLX",            unit: "score",source: "Google Forms",            formula: "% Promotores − % Detratores" },
+  { id: "entregas_no_prazo",         key: "entregas_no_prazo",         label: "Entregas no Prazo (%)",          unit: "%",    source: "Planilha de Contratos",   formula: "Entregas no prazo ÷ Total entregas × 100" },
+  { id: "tempo_medio_de_onboarding", key: "tempo_medio_de_onboarding", label: "Tempo Médio de Onboarding",      unit: "dias", source: "Cálculo interno",         formula: "Média de dias desde assinatura até go-live" },
+  { id: "health_score_por_cliente",  key: "health_score_por_cliente",  label: "Health Score por Cliente",       unit: "score",source: "Cálculo interno",         formula: "Média ponderada de uso, NPS e entregas" },
+  { id: "taxa_de_indicacao",         key: "taxa_de_indicacao",         label: "Taxa de Indicação (%)",          unit: "%",    source: "Pipedrive",               formula: "Leads via indicação ÷ Total leads × 100" },
+  { id: "receita_total_mensal",      key: "receita_total_mensal",      label: "Receita Total Mensal",           unit: "R$",   source: "ASAAS",                   formula: "Σ receita de todos os clientes no mês" },
+  { id: "margem_liquida",            key: "margem_liquida",            label: "Margem Líquida (%)",             unit: "%",    source: "DRE",                     formula: "(Receita − Custos totais) ÷ Receita × 100" },
+  { id: "cac_custo_de_aquisicao",    key: "cac_custo_de_aquisicao",    label: "CAC — Custo de Aquisição",       unit: "R$",   source: "Cálculo interno",         formula: "Investimento em vendas ÷ Novos clientes" },
+  { id: "fluxo_de_caixa_projetado",  key: "fluxo_de_caixa_projetado",  label: "Fluxo de Caixa Projetado",       unit: "R$",   source: "ASAAS",                   formula: "Entradas previstas − Saídas previstas" },
+  { id: "inadimplencia",             key: "inadimplencia",             label: "Inadimplência (%)",              unit: "%",    source: "ASAAS",                   formula: "Valor em atraso ÷ Receita total × 100" },
+  { id: "receita_por_hora",          key: "receita_por_hora",          label: "Receita por Hora",               unit: "R$",   source: "Controle de Tempo",       formula: "Receita total ÷ Horas trabalhadas" },
+  { id: "utilizacao_de_capacidade",  key: "utilizacao_de_capacidade",  label: "Utilização de Capacidade (%)",   unit: "%",    source: "Controle de Tempo",       formula: "Horas alocadas ÷ Horas disponíveis × 100" },
+  { id: "horas_por_cliente_semana",  key: "horas_por_cliente_semana",  label: "Horas por Cliente/Semana",       unit: "hrs",  source: "Controle de Tempo",       formula: "Horas totais ÷ Clientes ativos ÷ semanas" },
+  { id: "sla_resposta_clientes",     key: "sla_resposta_clientes",     label: "SLA Resposta Clientes",          unit: "hrs",  source: "Cálculo interno",         formula: "Tempo médio de primeira resposta ao cliente" },
+];
 
-function matchesOperationFilter(row: GenericRow, chartFilter: AdminChartFilter | null) {
-  if (!chartFilter) return true;
-  if (chartFilter.dimension === "client") return (row.cliente ?? "") === chartFilter.value;
-  if (chartFilter.dimension === "capacityBand") return (row.faixa ?? "") === chartFilter.value;
-  if (chartFilter.dimension === "month") return true;
-  return true;
-}
+// ─── Builders ────────────────────────────────────────────────────────────────
 
-function buildPipelineData(semaforo: string, period: string, product: string, chartFilter: AdminChartFilter | null): AdminDashboardViewData {
-  const view = getView("pipeline");
-  const spec = getSpecView("pipeline");
-  const allKpis = view.modules.flatMap((module) => module.kpis);
-  const kpiMap = new Map(allKpis.map((kpi) => [kpi.id, kpi]));
-  const selected = maybeFilterStatus(
-    [
-      kpiMap.get("leads-totais"),
-      kpiMap.get("leads-quentes"),
-      kpiMap.get("calls-qualificacao"),
-      kpiMap.get("calls-fechamento"),
-      kpiMap.get("taxa-fechamento-contrato"),
-      kpiMap.get("pipeline-ponderado"),
-    ].filter(Boolean) as typeof allKpis,
-    semaforo,
-  );
+function buildPipelineData(api: ApiResponse): AdminDashboardViewData {
+  const p = api.visao_2_pipeline;
+  const view = ADMIN_DASHBOARD_MOCK_DATA.views.find((v) => v.id === "pipeline")!;
 
-  const summaryCards = selected.map((kpi) => ({
-    id: kpi.id,
-    title: kpi.name,
-    value: kpi.currentValue,
-    status: kpi.status,
-    formula: kpi.formula,
-    source: kpi.source,
-    thresholds: kpi.thresholds,
-  }));
-
-  const topCharts: ChartConfig[] = [
-    {
-      id: "funnel",
-      title: "Funil Executivo",
-      subtitle: "Fluxo entre lead, lead quente, call de qualificacao e contrato.",
-      type: "bar",
-      data: [
-        { stage: "Leads", value: parseNumericValue(kpiMap.get("leads-totais")?.currentValue ?? "0") },
-        { stage: "Leads quentes", value: parseNumericValue(kpiMap.get("leads-quentes")?.currentValue ?? "0") },
-        { stage: "Calls qualif.", value: parseNumericValue(kpiMap.get("calls-qualificacao")?.currentValue ?? "0") },
-        { stage: "Calls fech.", value: parseNumericValue(kpiMap.get("calls-fechamento")?.currentValue ?? "0") },
-        { stage: "Contratos", value: 2 },
-      ],
-      dataKeys: ["value"],
-      colors: ["#ff7a1a"],
-    },
-    {
-      id: "weighted",
-      title: "Pipeline Ponderado",
-      subtitle: "Serie semanal respeitando as probabilidades do briefing.",
-      type: "line",
-      data: [
-        ...pickSeriesWindow(
-          [
-            { semana: "S-5", value: 298000 },
-            { semana: "S-4", value: 325000 },
-            { semana: "S-3", value: 351000 },
-            { semana: "S-2", value: 384000 },
-            { semana: "S-1", value: 421000 },
-            { semana: "Atual", value: parseNumericValue(kpiMap.get("pipeline-ponderado")?.currentValue ?? "0") },
-          ],
-          period,
-        ),
-      ],
-      dataKeys: ["value"],
-      colors: ["#2563eb"],
-    },
-  ];
-
-  const bottomCharts: ChartConfig[] = [
-    {
-      id: "sources",
-      title: "Leads por Origem",
-      subtitle: "Separacao visual do topo do funil por canal dominante.",
-      type: "pie",
-      data: [
-        { name: "Pipedrive", value: 18 },
-        { name: "LinkedIn", value: 11 },
-        { name: "Indicacao", value: 9 },
-        { name: "Outbound", value: 8 },
-      ],
-      dataKeys: ["value"],
-      colors: ["#ff7a1a", "#0f172a", "#22c55e", "#38bdf8"],
-    },
-    {
-      id: "conversion",
-      title: "Conversao por Etapa",
-      subtitle: "OS e Advisory separados visualmente, sem misturar funis.",
-      type: "bar",
-      data: [
-        { etapa: "Lead > quente", os: 41, advisory: 32 },
-        { etapa: "Quente > call", os: 74, advisory: 66 },
-        { etapa: "Call > fechamento", os: 63, advisory: 54 },
-        { etapa: "Fechamento > contrato", os: 31, advisory: 27 },
-      ],
-      dataKeys: ["os", "advisory"],
-      colors: ["#ff7a1a", "#14b8a6"],
-    },
-    {
-      id: "cycle",
-      title: "Ciclo Medio Lead > Contrato",
-      subtitle: "Comparativo por produto para localizar gargalo comercial.",
-      type: "bar",
-      data: [
-        { produto: "OS", dias: 27 },
-        { produto: "Advisory", dias: 18 },
-      ],
-      dataKeys: ["dias"],
-      colors: ["#f59e0b"],
-    },
-    {
-      id: "os-vs-advisory",
-      title: "OS vs Advisory",
-      subtitle: "Leitura de distribuicao entre recorrencia consultiva e setup.",
-      type: "area",
-      data: [
-        { mes: "Nov", os: 1, advisory: 1 },
-        { mes: "Dez", os: 2, advisory: 1 },
-        { mes: "Jan", os: 2, advisory: 2 },
-        { mes: "Fev", os: 3, advisory: 1 },
-        { mes: "Mar", os: 3, advisory: 1 },
-      ],
-      dataKeys: ["os", "advisory"],
-      colors: ["#fb923c", "#2dd4bf"],
-    },
-  ];
-
-  const pipelineRows = [
-    { oportunidade: "OS Pro - Clinica Axis", etapa: "Call Fechamento", produto: "OS", probabilidade: "60%", valor: "R$ 48 mil", owner: "Guilherme", origem: "Pipedrive" },
-    { oportunidade: "Advisory Board - Velloz", etapa: "Proposta enviada", produto: "ADVISORY", probabilidade: "80%", valor: "R$ 26 mil", owner: "Matheus", origem: "LinkedIn" },
-    { oportunidade: "OS Start - Kronos", etapa: "Diagnostico", produto: "OS", probabilidade: "60%", valor: "R$ 18 mil", owner: "Guilherme", origem: "Indicacao" },
-    { oportunidade: "Advisory Scale - Nativa", etapa: "Call Qualificacao", produto: "ADVISORY", probabilidade: "30%", valor: "R$ 39 mil", owner: "Matheus", origem: "Outbound" },
-  ];
-
-  const tableRows = filterByProduct(
-    pipelineRows.filter((row) => matchesPipelineFilter(row, chartFilter)),
-    product,
-  );
-
-  const alerts = allKpis
-    .filter((kpi) => kpi.status !== "green")
-    .sort((a, b) => STATUS_WEIGHT[b.status] - STATUS_WEIGHT[a.status])
-    .slice(0, 4)
-    .map((kpi, index) => {
-      const rule = GLX_ADMIN_BRIEFING_SPEC.alerts.find((item) => item.status === (kpi.status.toUpperCase() as "GREEN" | "YELLOW" | "RED"));
-      const hideByFilter =
-        chartFilter?.dimension === "product" &&
-        chartFilter.value === "OS" &&
-        kpi.id.includes("advisory");
-      if (hideByFilter) return null;
-      return {
-        id: `${kpi.id}-${index}`,
-        title: kpi.name,
-        level: kpi.status,
-        description: kpi.executiveReading,
-        action: rule?.requiredAction ?? "Investigar",
-        deadline: rule?.deadline ?? "Sem prazo",
-      };
-    })
-    .filter(Boolean) as AlertItem[];
-
-  return {
-    heading: "Pipeline & Funil",
-    question: spec?.questionAnswered ?? view.executiveQuestion,
-    explanation: "Visao de futuro. Esta camada continua separada da operacao e responde apenas pela garantia de crescimento dos proximos 30 a 60 dias.",
-    chartLayout: "pipeline",
-    pipelineView: view,
-    summaryCards,
-    topCharts,
-    bottomCharts,
-    tableTitle: "Oportunidades e Gargalos",
-    tableRows,
-    alerts,
-    activeFilter: chartFilter?.label ?? null,
-    metaCards: [
-      { label: "Cadencia", value: spec?.reviewCadence ?? view.cadence },
-      { label: "Produtos", value: product === "ALL" ? (spec?.products ?? []).join(" + ") || "OS + Advisory" : product },
-      { label: "Fontes", value: "Pipedrive, Google Calendar e Contratos" },
-    ],
-  };
-}
-
-function buildOperacaoData(semaforo: string, period: string, _product: string, chartFilter: AdminChartFilter | null): AdminDashboardViewData {
-  const view = getView("operacao");
-  const spec = getSpecView("operacao");
-  const allKpis = view.modules.flatMap((module) => module.kpis);
-  const kpiMap = new Map(allKpis.map((kpi) => [kpi.id, kpi]));
-  const selected = maybeFilterStatus(
-    [
-      kpiMap.get("mrr-total"),
-      kpiMap.get("crescimento-mrr"),
-      kpiMap.get("churn-rate"),
-      kpiMap.get("margem-liquida"),
-      kpiMap.get("fluxo-caixa-projetado"),
-      kpiMap.get("utilizacao-capacidade"),
-    ].filter(Boolean) as typeof allKpis,
-    semaforo,
-  );
-
-  const summaryCards = selected.map((kpi) => ({
-    id: kpi.id,
-    title: kpi.name,
-    value: kpi.currentValue,
-    status: kpi.status,
-    formula: kpi.formula,
-    source: kpi.source,
-    thresholds: kpi.thresholds,
-  }));
-
-  const topCharts: ChartConfig[] = [
-    {
-      id: "mrr",
-      title: "Modulo 1 - Receita & MRR | Evolucao MRR",
-      subtitle: "MRR total conforme Planilha de Contratos, mostrando tendencia mensal da base recorrente.",
-      type: "line",
-      data: [
-        ...pickSeriesWindow(
-          [
-            { mes: "Out", value: 112000 },
-            { mes: "Nov", value: 118000 },
-            { mes: "Dez", value: 125000 },
-            { mes: "Jan", value: 132000 },
-            { mes: "Fev", value: 141000 },
-            { mes: "Mar", value: parseNumericValue(kpiMap.get("mrr-total")?.currentValue ?? "0") },
-          ],
-          period,
-        ),
-      ],
-      dataKeys: ["value"],
-      colors: ["#2563eb"],
-    },
-    {
-      id: "new-vs-churn",
-      title: "Modulo 1 - Receita & MRR | New MRR vs Churn MRR",
-      subtitle: "Comparativo direto entre receita nova e perda recorrente, respeitando a logica do briefing.",
-      type: "bar",
-      data: [
-        { mes: "Jan", newMrr: 15000, churnMrr: 3100 },
-        { mes: "Fev", newMrr: 19800, churnMrr: 4200 },
-        { mes: "Mar", newMrr: parseNumericValue(kpiMap.get("new-mrr")?.currentValue ?? "0"), churnMrr: parseNumericValue(kpiMap.get("churn-mrr")?.currentValue ?? "0") },
-      ],
-      dataKeys: ["newMrr", "churnMrr"],
-      colors: ["#22c55e", "#ef4444"],
-    },
-  ];
-
-  const bottomCharts: ChartConfig[] = [
-    {
-      id: "revenue-composition",
-      title: "Modulo 3 - Financeiro Interno | Composicao da Receita",
-      subtitle: "Receita total mensal separada entre recorrencia, setup e one-time para leitura financeira.",
-      type: "pie",
-      data: [
-        { name: "MRR recorrente", value: 148200 },
-        { name: "Setup OS", value: 18600 },
-        { name: "Advisory one-time", value: 10100 },
-      ],
-      dataKeys: ["value"],
-      colors: ["#ff7a1a", "#3b82f6", "#14b8a6"],
-    },
-    {
-      id: "margin",
-      title: "Modulo 3 - Financeiro Interno | Margem Liquida",
-      subtitle: "Margem liquida mensal com base em DRE e thresholds do briefing.",
-      type: "area",
-      data: [
-        { mes: "Out", value: 24 },
-        { mes: "Nov", value: 27 },
-        { mes: "Dez", value: 31 },
-        { mes: "Jan", value: 29 },
-        { mes: "Fev", value: 34 },
-        { mes: "Mar", value: parseNumericValue(kpiMap.get("margem-liquida")?.currentValue ?? "0") },
-      ],
-      dataKeys: ["value"],
-      colors: ["#22c55e"],
-    },
-    {
-      id: "nps",
-      title: "Modulo 2 - Clientes & Retencao | NPS e Health Score",
-      subtitle: "Satisfacao, risco e retencao, alimentados por Forms, Checklist e Planilha de Contratos.",
-      type: "bar",
-      data: [
-        { name: "NPS", value: parseNumericValue(kpiMap.get("nps-clientes")?.currentValue ?? "0") },
-        { name: "Health score", value: parseNumericValue(kpiMap.get("health-score")?.currentValue ?? "0") },
-      ],
-      dataKeys: ["value"],
-      colors: ["#a855f7"],
-    },
-    {
-      id: "capacity",
-      title: "Modulo 4 - Capacidade & Operacao | Capacidade e SLA",
-      subtitle: "Uso da capacidade, tempo de resposta e pressao operacional do time.",
-      type: "line",
-      data: [
-        { semana: "S1", capacidade: 76, sla: 1.9 },
-        { semana: "S2", capacidade: 81, sla: 2.2 },
-        { semana: "S3", capacidade: 83, sla: 2.6 },
-        { semana: "S4", capacidade: parseNumericValue(kpiMap.get("utilizacao-capacidade")?.currentValue ?? "0"), sla: parseNumericValue(kpiMap.get("sla-resposta-clientes")?.currentValue ?? "0") },
-      ],
-      dataKeys: ["capacidade", "sla"],
-      colors: ["#f97316", "#0f172a"],
-    },
-  ];
-
-  const operationRows = [
-    { cliente: "Clinica Axis", healthScore: "6,8", faixa: "Risco moderado", nps: "7,1", entregasNoPrazo: "91%" },
-    { cliente: "Velloz", healthScore: "8,9", faixa: "Saudavel", nps: "9,0", entregasNoPrazo: "98%" },
-    { cliente: "Kronos", healthScore: "5,9", faixa: "Plano de resgate", nps: "6,4", entregasNoPrazo: "84%" },
-    { cliente: "Nativa", healthScore: "7,4", faixa: "Atencao", nps: "8,2", entregasNoPrazo: "93%" },
-  ];
-  const tableRows = operationRows.filter((row) => matchesOperationFilter(row, chartFilter));
-
-  const alerts = allKpis
-    .filter((kpi) => kpi.status !== "green")
-    .sort((a, b) => STATUS_WEIGHT[b.status] - STATUS_WEIGHT[a.status])
-    .slice(0, 5)
-    .map((kpi, index) => {
-      const rule = GLX_ADMIN_BRIEFING_SPEC.alerts.find((item) => item.status === (kpi.status.toUpperCase() as "GREEN" | "YELLOW" | "RED"));
-      const hideByFilter =
-        chartFilter?.dimension === "client" &&
-        !["nps-clientes", "health-score", "churn-rate"].includes(kpi.id);
-      if (hideByFilter) return null;
-      return {
-        id: `${kpi.id}-${index}`,
-        title: kpi.name,
-        level: kpi.status,
-        description: kpi.executiveReading,
-        action: rule?.requiredAction ?? "Investigar",
-        deadline: rule?.deadline ?? "Sem prazo",
-      };
-    })
-    .filter(Boolean) as AlertItem[];
-
-  return {
-    heading: "Operação Interna",
-    question: spec?.questionAnswered ?? view.executiveQuestion,
-    explanation: "Visao de presente e passado recente. Esta rota mostra a saude atual do negocio usando apenas fontes operacionais e financeiras do briefing.",
-    chartLayout: "operation",
-    operationChartsData: {
-      mrrAtual: parseNumericValue(kpiMap.get("mrr-total")?.currentValue ?? "0"),
-      crescimentoMrrAtual: parseNumericValue(kpiMap.get("crescimento-mrr")?.currentValue ?? "0"),
-      newMrrAtual: parseNumericValue(kpiMap.get("new-mrr")?.currentValue ?? "0"),
-      churnMrrAtual: parseNumericValue(kpiMap.get("churn-mrr")?.currentValue ?? "0"),
-      margemAtual: parseNumericValue(kpiMap.get("margem-liquida")?.currentValue ?? "0"),
-      capacidadeAtual: parseNumericValue(kpiMap.get("utilizacao-capacidade")?.currentValue ?? "0"),
-      slaAtual: parseNumericValue(kpiMap.get("sla-resposta-clientes")?.currentValue ?? "0"),
-      npsAtual: parseNumericValue(kpiMap.get("nps-clientes")?.currentValue ?? "0"),
-    },
-    summaryCards,
-    topCharts,
-    bottomCharts,
-    integrationGroups: [
-      {
-        module: "Modulo 1 - Receita & MRR",
-        cadence: "Mensal + revisao semanal de forecast",
-        sources: ["Planilha de Contratos", "Pipedrive", "Calculado"],
-        note: "MRR total, crescimento, new MRR, churn MRR e forecast MRR 3 meses.",
-      },
-      {
-        module: "Modulo 2 - Clientes & Retencao",
-        cadence: "Mensal + checkpoints semanais",
-        sources: ["Planilha de Contratos", "Google Forms", "Checklist por cliente", "Pipedrive"],
-        note: "Clientes ativos, churn rate, NPS, entregas no prazo, onboarding, health score e indicacao.",
-      },
-      {
-        module: "Modulo 3 - Financeiro Interno",
-        cadence: "Semanal para caixa e inadimplencia; mensal para margem e CAC",
-        sources: ["ASAAS", "Planilha DRE", "Controle de Tempo", "Pipedrive"],
-        note: "Receita total, margem liquida, CAC, fluxo de caixa projetado, inadimplencia e receita por hora.",
-      },
-      {
-        module: "Modulo 4 - Capacidade & Operacao",
-        cadence: "Semanal",
-        sources: ["Planilha de Capacidade", "Controle de Tempo", "WhatsApp / Gmail"],
-        note: "Utilizacao de capacidade, horas por cliente por semana e SLA de resposta.",
-      },
-    ],
-    tableTitle: "Health Score por cliente",
-    tableRows,
-    alerts,
-    activeFilter: chartFilter?.label ?? null,
-    metaCards: [
-      { label: "Cadencia", value: spec?.reviewCadence ?? view.cadence },
-      { label: "Fontes", value: "Contratos, ASAAS, DRE, Forms e Tempo" },
-      { label: "Escopo", value: "Receita, retencao, margem e capacidade" },
-    ],
-  };
-}
-
-function localizeViewData(data: AdminDashboardViewData, language: "pt" | "en" | "es"): AdminDashboardViewData {
-  const translate = (value: string) => translateAdminDashboardText(value, language);
-
-  return {
-    ...data,
-    heading: translate(data.heading),
-    question: translate(data.question),
-    explanation: data.explanation ? translate(data.explanation) : data.explanation,
-    summaryCards: data.summaryCards.map((card) => ({
-      ...card,
-      title: translate(card.title),
-      formula: translate(card.formula),
-      source: translate(card.source),
-      thresholds: {
-        green: translate(card.thresholds.green),
-        yellow: translate(card.thresholds.yellow),
-        red: translate(card.thresholds.red),
-      },
-    })),
-    topCharts: data.topCharts.map((chart) => ({
-      ...chart,
-      title: translate(chart.title),
-      subtitle: translate(chart.subtitle),
-      data: chart.data.map((row) =>
-        Object.fromEntries(
-          Object.entries(row).map(([key, value]) => [key, typeof value === "string" ? translate(value) : value]),
-        ),
-      ),
-    })),
-    bottomCharts: data.bottomCharts.map((chart) => ({
-      ...chart,
-      title: translate(chart.title),
-      subtitle: translate(chart.subtitle),
-      data: chart.data.map((row) =>
-        Object.fromEntries(
-          Object.entries(row).map(([key, value]) => [key, typeof value === "string" ? translate(value) : value]),
-        ),
-      ),
-    })),
-    integrationGroups: data.integrationGroups?.map((group) => ({
-      ...group,
-      module: translate(group.module),
-      cadence: translate(group.cadence),
-      sources: group.sources.map(translate),
-      note: translate(group.note),
-    })),
-    tableTitle: translate(data.tableTitle),
-    tableRows: data.tableRows.map((row) =>
-      Object.fromEntries(Object.entries(row).map(([key, value]) => [translate(key), translate(value)])),
-    ),
-    alerts: data.alerts.map((alert) => ({
-      ...alert,
-      title: translate(alert.title),
-      description: translate(alert.description),
-      action: translate(alert.action),
-      deadline: translate(alert.deadline),
-    })),
-    metaCards: data.metaCards.map((card) => ({
-      label: translate(card.label),
-      value: translate(card.value),
-    })),
-    activeFilter: data.activeFilter ? translate(data.activeFilter) : data.activeFilter,
-  };
-}
-
-function fetchView(viewId: DashboardViewId, semaforo: string, period: string, product: string, chartFilter: AdminChartFilter | null): Promise<AdminDashboardViewData> {
-  const data = viewId === "pipeline"
-    ? buildPipelineData(semaforo, period, product, chartFilter)
-    : buildOperacaoData(semaforo, period, product, chartFilter);
-  return Promise.resolve(data);
-}
-
-export function useAdminDashboardView(viewId: DashboardViewId) {
-  const { language } = useLanguage();
-  const period = useAdminDashboardStore((state) => state.period);
-  const product = useAdminDashboardStore((state) => state.product);
-  const semaforo = useAdminDashboardStore((state) => state.semaforo);
-  const chartFilter = useAdminDashboardStore((state) => state.chartFilter);
-
-  return useQuery({
-    queryKey: ["admin-dashboard-view", viewId, language, period, product, semaforo, chartFilter?.dimension, chartFilter?.value],
-    queryFn: async () => {
-      const data = await fetchView(viewId, semaforo, period, product, chartFilter);
-      return localizeViewData(data, language);
-    },
-    staleTime: 1000 * 60 * 5,
+  const summaryCards = PIPELINE_KPIS.slice(0, 6).map((def) => {
+    const kpi = p[def.key];
+    return {
+      id: def.id,
+      title: def.label,
+      value: formatValue(kpi, def.unit),
+      status: mapStatus(kpi?.status ?? "neutro"),
+      source: def.source,
+      formula: def.formula,
+      thresholds: { green: "Meta atingida", yellow: "Abaixo da meta", red: "Crítico" },
+    };
   });
+
+  const metaCards = [
+    { label: "Pipeline Ponderado", value: formatValue(p.pipeline_ponderado_total, "R$") },
+    { label: "Leads Quentes",      value: formatValue(p.leads_quentes, "qty") },
+    { label: "Taxa Fechamento → Contrato", value: formatValue(p.taxa_fechamento_contrato, "%") },
+    { label: "Setups em Andamento", value: formatValue(p.setups_em_andamento, "qty") },
+  ];
+
+  const tableRows = PIPELINE_KPIS.map((def) => ({
+    KPI: def.label,
+    Valor: formatValue(p[def.key], def.unit),
+    Status: mapStatus(p[def.key]?.status ?? "neutro").toUpperCase(),
+    Fonte: def.source,
+  }));
+
+  return {
+    heading: "O crescimento futuro está garantido?",
+    question: "O crescimento dos próximos 30 a 60 dias está garantido?",
+    explanation: "Dados ao vivo via API GLX — aiatende.dev.br",
+    chartLayout: "pipeline",
+    metaCards,
+    summaryCards,
+    topCharts: [],
+    bottomCharts: [],
+    tableRows,
+    alerts: [],
+    pipelineView: view,
+    pipelineApiKpis: p as Record<string, { value: number | null; status: string }>,
+  };
+}
+
+function buildOperacaoData(api: ApiResponse): AdminDashboardViewData {
+  const o = api.visao_1_operacao;
+
+  const summaryCards = OPERACAO_KPIS.slice(0, 6).map((def) => {
+    const kpi = o[def.key];
+    return {
+      id: def.id,
+      title: def.label,
+      value: formatValue(kpi, def.unit),
+      status: mapStatus(kpi?.status ?? "neutro"),
+      source: def.source,
+      formula: def.formula,
+      thresholds: { green: "Meta atingida", yellow: "Abaixo da meta", red: "Crítico" },
+    };
+  });
+
+  const metaCards = [
+    { label: "MRR Total",        value: formatValue(o.mrr_total, "R$") },
+    { label: "Churn Rate",       value: formatValue(o.churn_rate, "%") },
+    { label: "Margem Líquida",   value: formatValue(o.margem_liquida, "%") },
+    { label: "Cap. Utilizada",   value: formatValue(o.utilizacao_de_capacidade, "%") },
+  ];
+
+  const tableRows = OPERACAO_KPIS.map((def) => ({
+    KPI: def.label,
+    Valor: formatValue(o[def.key], def.unit),
+    Status: mapStatus(o[def.key]?.status ?? "neutro").toUpperCase(),
+    Fonte: def.source,
+  }));
+
+  const mrrAtual       = o.mrr_total?.value ?? 0;
+  const crescimento    = o.crescimento_mrr?.value ?? 0;
+  const newMrr         = o.new_mrr?.value ?? 0;
+  const churnMrr       = o.churn_mrr?.value ?? 0;
+  const margem         = o.margem_liquida?.value ?? 0;
+  const capacidade     = o.utilizacao_de_capacidade?.value ?? 0;
+  const sla            = o.sla_resposta_clientes?.value ?? 0;
+  const nps            = o.nps_de_clientes_glx?.value ?? 0;
+
+  return {
+    heading: "A operação interna está saudável?",
+    question: "A empresa está saudável agora e protegendo o dinheiro que ganhou?",
+    explanation: "Dados ao vivo via API GLX — aiatende.dev.br",
+    chartLayout: "operation",
+    metaCards,
+    summaryCards,
+    topCharts: [],
+    bottomCharts: [],
+    tableRows,
+    alerts: [],
+    operationChartsData: {
+      mrrAtual,
+      crescimentoMrrAtual: crescimento,
+      newMrrAtual: newMrr,
+      churnMrrAtual: churnMrr,
+      margemAtual: margem,
+      capacidadeAtual: capacidade,
+      slaAtual: sla,
+      npsAtual: nps,
+    },
+  };
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useAdminDashboardView(viewId: DashboardViewId): {
+  data: AdminDashboardViewData | null;
+  isLoading: boolean;
+} {
+  const period = useAdminDashboardStore((state) => state.period);
+  const [data, setData] = useState<AdminDashboardViewData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+
+    const { from, to } = periodToRange(period);
+    const params = new URLSearchParams();
+    if (from) params.set("from", String(from));
+    if (to)   params.set("to", String(to));
+
+    fetch(`${API_BASE}/kpis?${params.toString()}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+        return res.json() as Promise<ApiResponse>;
+      })
+      .then((api) => {
+        if (cancelled) return;
+        setData(viewId === "operacao" ? buildOperacaoData(api) : buildPipelineData(api));
+      })
+      .catch(() => {
+        // Em caso de erro de rede, mantém dados anteriores sem travar a UI
+        if (!cancelled) setData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [viewId, period]);
+
+  return { data, isLoading };
 }

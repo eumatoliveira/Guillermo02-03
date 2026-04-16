@@ -11,11 +11,14 @@ export interface KommoLeadDto {
   rawPayload?: unknown;
 }
 
+import { validateKommoDomain } from "./kommoValidation";
+
 export async function fetchKommoLeads(_params: {
   accountDomain: string;
   accessToken: string;
   createdAtFrom?: string;
 }): Promise<KommoLeadDto[]> {
+  validateKommoDomain(_params.accountDomain);
   const url = new URL(`https://${_params.accountDomain}/api/v4/leads`);
   url.searchParams.set("limit", "250");
   if (_params.createdAtFrom) {

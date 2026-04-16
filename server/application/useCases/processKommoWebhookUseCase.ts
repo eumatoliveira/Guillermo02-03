@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { ENV } from "../../_core/env";
 
 export interface ProcessKommoWebhookInput {
@@ -23,7 +24,10 @@ export async function processKommoWebhookUseCase(input: ProcessKommoWebhookInput
     return { accepted: false, status: "ignored", reason: "missing_webhook_secret" };
   }
 
-  if (!input.signature || input.signature !== expectedSecret) {
+  const sigMatch = input.signature
+    ? timingSafeEqual(Buffer.from(input.signature), Buffer.from(expectedSecret))
+    : false;
+  if (!sigMatch) {
     return { accepted: false, status: "ignored", reason: "invalid_signature" };
   }
 

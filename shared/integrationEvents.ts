@@ -5,6 +5,8 @@ export type IntegrationEventEntity =
   | "contact"
   | "company"
   | "task"
+  | "note"
+  | "crm_event"
   | "payment"
   | "invoice"
   | "customer";

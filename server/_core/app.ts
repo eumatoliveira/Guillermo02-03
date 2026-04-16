@@ -15,6 +15,7 @@ import { exportRouter } from "../exportRouter";
 import { v1Router } from "../publicApi/v1Router";
 import { bootstrapDone } from "../authRouter";
 import { getDb } from "../db";
+import { sdk } from "./sdk";
 
 // ═══════════════════════════════════════════════════════════════
 // Port Discovery
@@ -232,6 +233,45 @@ function registerAppRoutes(app: Express) {
   registerAsaasWebhookRouter(app);
   app.use("/api/export", exportRouter);
   app.use("/api/v1", v1Router);
+  app.get("/api/admin-dashboard/kpis", async (req: Request, res: Response) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user || user.role !== "admin") {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    try {
+      const endpoint = new URL("https://aiatende.dev.br/glx/api/kpis");
+      const from = typeof req.query.from === "string" ? req.query.from.trim() : "";
+      const to = typeof req.query.to === "string" ? req.query.to.trim() : "";
+
+      if (from) endpoint.searchParams.set("from", from);
+      if (to) endpoint.searchParams.set("to", to);
+
+      const response = await fetch(endpoint, {
+        headers: { Accept: "application/json" },
+      });
+
+      const text = await response.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        res.status(502).json({ error: "Upstream returned non-JSON response" });
+        return;
+      }
+      res.status(response.status).json(parsed);
+    } catch (error) {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Nao foi possivel consultar o endpoint de KPIs.",
+      });
+    }
+  });
 
   app.use(
     "/api/trpc",

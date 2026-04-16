@@ -39,6 +39,7 @@ const PRODUCT_OPTIONS: AdminProduct[] = ["ALL", "OS", "ADVISORY"];
 function statusClass(status: string) {
   if (status === "green") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (status === "yellow") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (status === "neutral") return "border-slate-200 bg-slate-50 text-slate-600";
   return "border-rose-200 bg-rose-50 text-rose-700";
 }
 
@@ -241,7 +242,7 @@ export function AdminDashboardPanels({
       {data.chartLayout === "operation" && data.operationChartsData ? (
         <OperacaoChartsGrid {...data.operationChartsData} />
       ) : data.chartLayout === "pipeline" && data.pipelineView ? (
-        <PipelineChartsGrid view={data.pipelineView} />
+        <PipelineChartsGrid view={data.pipelineView} apiKpis={data.pipelineApiKpis} />
       ) : (
         <>
           <div className="grid gap-5 xl:grid-cols-2">

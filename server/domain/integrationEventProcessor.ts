@@ -31,25 +31,44 @@ function mapAsaasStatus(eventType: string, normalized: Record<string, unknown>):
   return "agendado";
 }
 
+// Retorna null para métricas sem dados no CRM — o frontend exibirá "Dados não entrados"
+function nullableNumber(normalized: Record<string, unknown>, key: string): number | null {
+  const v = normalized[key];
+  if (v === null || v === undefined) return null;
+  return toPositiveNumber(v);
+}
+
 export function envelopeToFactRows(envelope: IntegrationEventEnvelope): IngestionParsedRow[] {
   const normalized = envelope.normalized;
+
+  // Entidades de suporte (contact, task, crm_event) não geram linhas de fact operacionais
+  if (
+    envelope.entity === "contact" ||
+    envelope.entity === "task" ||
+    envelope.entity === "crm_event" ||
+    envelope.entity === "note"
+  ) {
+    return [];
+  }
+
   if (envelope.source === "kommo") {
-    const amount = toPositiveNumber(normalized["price"]);
+    const amount = nullableNumber(normalized, "price");
     return [
       {
         id: `${envelope.source}:${envelope.entityId}:${envelope.eventType}`,
         timestamp: envelope.occurredAt,
-        channel: normalizedString(normalized, "channel", "Kommo"),
-        professional: normalizedString(normalized, "responsible", "CRM"),
-        procedure: normalizedString(normalized, "title", "Lead"),
+        // Campos ausentes do CRM chegam como string vazia; o frontend exibe "Dados não entrados"
+        channel: normalizedString(normalized, "channel", ""),
+        professional: normalizedString(normalized, "responsible", ""),
+        procedure: normalizedString(normalized, "procedure", "") || normalizedString(normalized, "title", ""),
         status: mapKommoStatus(envelope.eventType, normalized),
-        pipeline: normalizedString(normalized, "pipeline", "Kommo"),
-        unit: "Principal",
-        entries: amount,
+        pipeline: normalizedString(normalized, "pipeline", "") || undefined,
+        unit: normalizedString(normalized, "unit", "") || undefined,
+        entries: amount ?? 0,
         exits: 0,
         slotsAvailable: 1,
         slotsEmpty: envelope.eventType.includes("created") ? 1 : 0,
-        ticketMedio: amount,
+        ticketMedio: amount ?? 0,
         custoVariavel: 0,
         durationMinutes: 0,
         materialList: [],

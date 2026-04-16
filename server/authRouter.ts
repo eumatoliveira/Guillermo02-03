@@ -18,7 +18,18 @@ import {
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { SignJWT } from "jose";
+import { kommoFullSyncUseCase } from "./application/useCases/kommoFullSyncUseCase";
 import { ENV } from "./_core/env";
+
+// Per-user TTL lock: prevents re-triggering full sync within 5 minutes of last sync
+const syncCooldownMs = 5 * 60 * 1000;
+const lastSyncAt = new Map<number, number>();
+function shouldTriggerSync(userId: number): boolean {
+  const last = lastSyncAt.get(userId);
+  if (last && Date.now() - last < syncCooldownMs) return false;
+  lastSyncAt.set(userId, Date.now());
+  return true;
+}
 
 const TEST_CLIENTS = ENV.bootstrapTestClientEmails.map((email) => ({
   email,
@@ -233,6 +244,13 @@ export const authRouter = router({
         userAgent: ctx.req.headers["user-agent"],
       });
 
+      // Dispara sync Kommo automaticamente no login do admin (fire-and-forget)
+      if (user.role === "admin") {
+        if (shouldTriggerSync(user.id)) {
+          kommoFullSyncUseCase({ userId: user.id, provider: "kommo" }).catch(() => {});
+        }
+      }
+
       return {
         success: true,
         user: {
@@ -281,31 +299,13 @@ export const authRouter = router({
       email: z.string().email(),
       newPassword: z.string().min(6),
     }))
-    .mutation(async ({ input }) => {
-      const normalizedEmail = input.email.trim().toLowerCase();
-      const user = await getUserByEmail(normalizedEmail);
-
-      // Retorna sucesso mesmo se o usuário não existir para evitar enumeração de contas.
-      if (!user || !user.passwordHash || !user.isActive) {
-        return {
-          success: true,
-          message: "Se o e-mail estiver cadastrado, a senha foi atualizada.",
-        };
-      }
-
-      const newPasswordHash = await bcrypt.hash(input.newPassword, 12);
-      await updateUserPassword(user.id, newPasswordHash);
-
-      await createAuditLog({
-        userId: user.id,
-        action: "recover_password",
-        entity: "user",
-        entityId: user.id.toString(),
-      });
-
+    .mutation(async () => {
+      // Password reset requires a verified token sent to the user's email.
+      // This flow is not yet implemented; returning a safe no-op to prevent
+      // unauthenticated password changes.
       return {
-        success: true,
-        message: "Se o e-mail estiver cadastrado, a senha foi atualizada.",
+        success: false,
+        message: "Recuperação de senha não disponível. Entre em contato com o suporte.",
       };
     }),
   // Change password (authenticated user)

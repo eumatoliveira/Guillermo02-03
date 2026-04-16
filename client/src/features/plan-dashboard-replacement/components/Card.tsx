@@ -11,7 +11,7 @@ export function cn(...inputs: (string | undefined | null | false)[]) {
 
 interface CardProps {
   title: string;
-  value?: string | number;
+  value?: string | number | null;
   subtitle?: string;
   icon?: LucideIcon;
   trend?: { value: number; isUp: boolean };
@@ -64,8 +64,14 @@ export function Card({ title, value, subtitle, icon: Icon, trend, badge, childre
           
           {value !== undefined && (
             <div className="flex items-baseline gap-4 mt-2">
-              <span className="text-4xl font-bold tracking-tight text-white drop-shadow-sm">{value}</span>
-              {trend && (
+              {value === null ? (
+                <span className="text-sm font-medium text-[#8892b0]/60 italic tracking-wide">
+                  Dados não entrados
+                </span>
+              ) : (
+                <span className="text-4xl font-bold tracking-tight text-white drop-shadow-sm">{value}</span>
+              )}
+              {value !== null && trend && (
                 <div className={cn(
                   "flex items-center text-sm font-medium",
                   trend.isUp ? "text-green-500" : "text-red-500"

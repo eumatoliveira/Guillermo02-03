@@ -109,331 +109,245 @@ function ChartCard({
   );
 }
 
-export function PipelineChartsGrid({ view }: { view: DashboardViewDefinition }) {
+type ApiKpiMap = Record<string, { value: number | null; status: string }>;
+
+function apiNum(kpis: ApiKpiMap | undefined, key: string): number | null {
+  if (!kpis) return null;
+  const v = kpis[key]?.value;
+  return v === undefined ? null : v;
+}
+
+function NoDataPlaceholder({ title, subtitle, eyebrow = "Detalhe" }: { title: string; subtitle?: string; eyebrow?: string }) {
+  return (
+    <ChartCard title={title} subtitle={subtitle} eyebrow={eyebrow} height={250}>
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+        <span className="text-2xl">—</span>
+        <p className="text-sm italic text-[#94a3b8]">Dados não entrados</p>
+        <p className="text-xs text-[#c4cdd6]">Fonte sem integração disponível</p>
+      </div>
+    </ChartCard>
+  );
+}
+
+export function PipelineChartsGrid({ view, apiKpis }: { view: DashboardViewDefinition; apiKpis?: ApiKpiMap }) {
   const chartFilter = useAdminDashboardStore((state) => state.chartFilter);
   const setChartFilter = useAdminDashboardStore((state) => state.setChartFilter);
   const setProduct = useAdminDashboardStore((state) => state.setProduct);
-  const leadsTotais = parseNumber(getKpi(view, "topo-funil", "leads-totais")?.currentValue ?? "0");
-  const leadsQuentes = parseNumber(getKpi(view, "topo-funil", "leads-quentes")?.currentValue ?? "0");
-  const callsQualificacao = parseNumber(getKpi(view, "topo-funil", "calls-qualificacao")?.currentValue ?? "0");
-  const callsFechamento = parseNumber(getKpi(view, "fechamento", "calls-fechamento")?.currentValue ?? "0");
-  const taxaLeadQuente = parseNumber(getKpi(view, "topo-funil", "taxa-lead-quente")?.currentValue ?? "0");
-  const taxaLeadCall = parseNumber(getKpi(view, "topo-funil", "taxa-lead-call")?.currentValue ?? "0");
-  const taxaQualifFechamento = parseNumber(getKpi(view, "fechamento", "taxa-qualif-fechamento")?.currentValue ?? "0");
-  const taxaFechamentoContrato = parseNumber(getKpi(view, "fechamento", "taxa-fechamento-contrato")?.currentValue ?? "0");
-  const cicloLeadContrato = parseNumber(getKpi(view, "fechamento", "ciclo-lead-contrato")?.currentValue ?? "0");
-  const pipelinePonderado = parseMoney(getKpi(view, "consolidada", "pipeline-ponderado")?.currentValue ?? "0");
-  const acvMedio = parseMoney(getKpi(view, "consolidada", "acv-medio")?.currentValue ?? "0");
-  const setupsAndamento = parseNumber(getKpi(view, "consolidada", "setups-andamento")?.currentValue ?? "0");
-  const osStartMrr12 = parseNumber(getKpi(view, "operation-system", "os-start-mrr12")?.currentValue ?? "0");
-  const osProMrr12 = parseNumber(getKpi(view, "operation-system", "os-pro-mrr12")?.currentValue ?? "0");
-  const renovacaoAdvisory = parseNumber(getKpi(view, "advisory", "renovacao-advisory")?.currentValue ?? "0");
 
-  const contratos = Math.max(1, Math.round((callsFechamento * taxaFechamentoContrato) / 100));
-  const targetMrr = Math.round(pipelinePonderado / 3);
+  // Valores da API (reais) — null quando não disponível
+  const leadsTotais        = apiNum(apiKpis, "leads_totais_gerados");
+  const leadsQuentes       = apiNum(apiKpis, "leads_quentes");
+  const callsQualificacao  = apiNum(apiKpis, "calls_de_qualificacao");
+  const callsFechamento    = apiNum(apiKpis, "calls_de_fechamento");
+  const taxaLeadQuente     = apiNum(apiKpis, "taxa_lead_lead_quente");
+  const taxaLeadCall       = apiNum(apiKpis, "taxa_lead_quente_call");
+  const taxaQualifFech     = apiNum(apiKpis, "taxa_qualif_fechamento");
+  const taxaFechContrato   = apiNum(apiKpis, "taxa_fechamento_contrato");
+  const pipelinePonderado  = apiNum(apiKpis, "pipeline_ponderado_total");
+  const acvMedio           = apiNum(apiKpis, "acv_valor_medio_contrato");
+  const osStartMrr12       = apiNum(apiKpis, "os_start_ativos_mrr_12m");
+  const osProMrr12         = apiNum(apiKpis, "os_pro_ativos_mrr_12m");
+  const renovacaoAdvisory  = apiNum(apiKpis, "taxa_renovacao_advisory_6m");
+  const setupsAndamento    = apiNum(apiKpis, "setups_em_andamento");
 
-  const funnelData = [
-    { etapa: "Leads", valor: leadsTotais, color: "#2563eb" },
-    { etapa: "Leads quentes", valor: leadsQuentes, color: "#22c55e" },
-    { etapa: "Calls qualif.", valor: callsQualificacao, color: "#f97316" },
-    { etapa: "Calls fech.", valor: callsFechamento, color: "#f59e0b" },
-    { etapa: "Contratos", valor: contratos, color: "#0f172a" },
-  ];
+  // Funil: só renderiza se tiver pelo menos os campos base da API
+  const hasFunnelData = leadsTotais !== null;
+  const contratos = (callsFechamento !== null && taxaFechContrato !== null)
+    ? Math.max(1, Math.round((callsFechamento * taxaFechContrato) / 100))
+    : null;
 
-  const weightedData = [
-    { semana: "S-5", pipeline: 298000, meta: targetMrr * 3, acv: 19000 },
-    { semana: "S-4", pipeline: 325000, meta: targetMrr * 3, acv: 20200 },
-    { semana: "S-3", pipeline: 351000, meta: targetMrr * 3, acv: 20800 },
-    { semana: "S-2", pipeline: 384000, meta: targetMrr * 3, acv: 21400 },
-    { semana: "S-1", pipeline: 421000, meta: targetMrr * 3, acv: 21900 },
-    { semana: "Atual", pipeline: pipelinePonderado, meta: targetMrr * 3, acv: acvMedio },
-  ];
+  const funnelData = hasFunnelData ? [
+    { etapa: "Leads",         valor: leadsTotais ?? 0,       color: "#2563eb" },
+    { etapa: "Leads quentes", valor: leadsQuentes ?? 0,      color: "#22c55e" },
+    { etapa: "Calls qualif.", valor: callsQualificacao ?? 0, color: "#f97316" },
+    { etapa: "Calls fech.",   valor: callsFechamento ?? 0,   color: "#f59e0b" },
+    { etapa: "Contratos",     valor: contratos ?? 0,         color: "#0f172a" },
+  ] : null;
 
-  const leadSourceData = [
-    { name: "Pipedrive", value: 18, color: "#f97316" },
-    { name: "LinkedIn", value: 11, color: "#0f172a" },
-    { name: "Indicacao", value: 9, color: "#22c55e" },
-    { name: "Outbound", value: 8, color: "#38bdf8" },
-  ];
+  // Pipeline Ponderado: só exibe o ponto atual; série histórica não vem da API → null
+  const hasPipelineData = pipelinePonderado !== null;
+  const targetMrr = pipelinePonderado !== null ? Math.round(pipelinePonderado / 3) : 0;
+  const weightedData = hasPipelineData ? [
+    { semana: "Atual", pipeline: pipelinePonderado ?? 0, meta: targetMrr * 3, acv: acvMedio ?? 0 },
+  ] : null;
 
-  const conversionData = [
-    { etapa: "Lead -> Quente", atual: taxaLeadQuente, meta: 35 },
-    { etapa: "Quente -> Call", atual: taxaLeadCall, meta: 60 },
-    { etapa: "Qualif. -> Fech.", atual: taxaQualifFechamento, meta: 70 },
-    { etapa: "Fech. -> Contrato", atual: taxaFechamentoContrato, meta: 40 },
-  ];
+  // Conversão por Etapa: usa taxas reais da API
+  const hasConversionData = taxaLeadQuente !== null;
+  const conversionData = hasConversionData ? [
+    { etapa: "Lead -> Quente",    atual: taxaLeadQuente ?? 0,   meta: 35 },
+    { etapa: "Quente -> Call",    atual: taxaLeadCall ?? 0,     meta: 60 },
+    { etapa: "Qualif. -> Fech.",  atual: taxaQualifFech ?? 0,   meta: 70 },
+    { etapa: "Fech. -> Contrato", atual: taxaFechContrato ?? 0, meta: 40 },
+  ] : null;
 
-  const cycleData = [
-    { produto: "OS", dias: 27, color: "#f59e0b" },
-    { produto: "Advisory", dias: 18, color: "#fb923c" },
-  ];
+  // OS vs Advisory: usa valores reais da API
+  const hasOsAdvisoryData = osStartMrr12 !== null;
+  const osVsAdvisoryData = hasOsAdvisoryData ? [
+    { eixo: "OS Start",  atual: osStartMrr12 ?? 0,      meta: 80 },
+    { eixo: "OS Pro",    atual: osProMrr12 ?? 0,         meta: 80 },
+    { eixo: "Advisory",  atual: renovacaoAdvisory ?? 0,  meta: 75 },
+    { eixo: "Setups",    atual: (setupsAndamento ?? 0) * 20, meta: 40 },
+  ] : null;
 
-  const osVsAdvisoryData = [
-    { eixo: "OS Start", atual: osStartMrr12, meta: 80 },
-    { eixo: "OS Pro", atual: osProMrr12, meta: 80 },
-    { eixo: "Advisory", atual: renovacaoAdvisory, meta: 75 },
-    { eixo: "Setups", atual: setupsAndamento * 20, meta: 40 },
-  ];
+  // Leads por Origem: distribuição por canal não está na API → sempre null
+  // Ciclo Médio por produto: API tem apenas valor agregado, sem breakdown OS/Advisory → sempre null
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <ChartCard
-          title="Funil Executivo"
-          subtitle="Blocos 1 e 2: entrada de leads, aquecimento comercial, calls e contratos."
-          height={320}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={funnelData} barGap={16}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
-              <XAxis dataKey="etapa" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
-              <Tooltip formatter={(value: ValueType | undefined) => [`${Math.round(tooltipNumber(value))}`, "Volume"]} />
-              <Legend />
-              <Bar
-                isAnimationActive
-                animationDuration={250}
-                animationEasing="ease-out"
-                dataKey="valor"
-                name="Volume atual"
-                radius={[8, 8, 0, 0]}
-                onClick={(entry) => {
-                  const etapa = funnelStage(entry);
-                  const stageMap: Record<string, string> = {
-                    Leads: "Lead",
-                    "Leads quentes": "Lead Quente",
-                    "Calls qualif.": "Call Qualificacao",
-                    "Calls fech.": "Call Fechamento",
-                    Contratos: "Proposta enviada",
-                  };
-                  setChartFilter({
-                    dimension: "stage",
-                    value: stageMap[etapa] ?? etapa,
-                    label: `Etapa ${etapa}`,
-                  });
-                }}
-              >
-                {funnelData.map((entry) => (
-                  <Cell
-                    key={entry.etapa}
-                    fill={entry.color}
-                    fillOpacity={!chartFilter || chartFilter.value === entry.etapa || chartFilter.label === `Etapa ${entry.etapa}` ? 1 : 0.45}
-                    style={{ cursor: "pointer" }}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        {/* Funil Executivo — dados reais da API */}
+        {funnelData ? (
+          <ChartCard
+            title="Funil Executivo"
+            subtitle="Blocos 1 e 2: entrada de leads, aquecimento comercial, calls e contratos."
+            height={320}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={funnelData} barGap={16}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
+                <XAxis dataKey="etapa" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
+                <Tooltip formatter={(value: ValueType | undefined) => [`${Math.round(tooltipNumber(value))}`, "Volume"]} />
+                <Legend />
+                <Bar
+                  isAnimationActive animationDuration={250} animationEasing="ease-out"
+                  dataKey="valor" name="Volume atual" radius={[8, 8, 0, 0]}
+                  onClick={(entry) => {
+                    const etapa = funnelStage(entry);
+                    const stageMap: Record<string, string> = {
+                      Leads: "Lead", "Leads quentes": "Lead Quente",
+                      "Calls qualif.": "Call Qualificacao", "Calls fech.": "Call Fechamento",
+                      Contratos: "Proposta enviada",
+                    };
+                    setChartFilter({ dimension: "stage", value: stageMap[etapa] ?? etapa, label: `Etapa ${etapa}` });
+                  }}
+                >
+                  {funnelData.map((entry) => (
+                    <Cell key={entry.etapa} fill={entry.color}
+                      fillOpacity={!chartFilter || chartFilter.value === entry.etapa || chartFilter.label === `Etapa ${entry.etapa}` ? 1 : 0.45}
+                      style={{ cursor: "pointer" }}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        ) : (
+          <NoDataPlaceholder eyebrow="Painel superior" title="Funil Executivo"
+            subtitle="Blocos 1 e 2: entrada de leads, aquecimento comercial, calls e contratos." />
+        )}
 
-        <ChartCard
-          title="Pipeline Ponderado"
-          subtitle="Bloco 5: serie semanal respeitando as probabilidades do briefing e o alvo de 3x meta."
-          height={320}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={weightedData}>
-              <defs>
-                <linearGradient id="pipelineFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.24} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0.03} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
-              <XAxis dataKey="semana" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tick={{ fill: "#64748b", fontSize: 12 }}
-                tickFormatter={(value) => `${Math.round(toNumber(value) / 1000)}k`}
-              />
-              <Tooltip formatter={(value: ValueType | undefined, name: NameType | undefined) => [formatCompactCurrency(tooltipNumber(value)), name === "pipeline" ? "Pipeline" : "Referencia"]} />
-              <Legend />
-              <ReferenceLine y={targetMrr * 3} stroke="#10b981" strokeDasharray="4 4" label="Meta 3x" />
-              <Area
-                isAnimationActive
-                animationDuration={250}
-                animationEasing="ease-out"
-                type="monotone"
-                dataKey="pipeline"
-                name="Pipeline ponderado"
-                stroke="#2563eb"
-                fill="url(#pipelineFill)"
-                strokeWidth={3}
-                onClick={(entry) => {
-                  const semana = weightedWeek(entry) || "Atual";
-                  setChartFilter({ dimension: "month", value: semana, label: `Semana ${semana}` });
-                }}
-              />
-              <Line
-                isAnimationActive
-                animationDuration={1200}
-                animationBegin={120}
-                animationEasing="ease-out"
-                type="monotone"
-                dataKey="acv"
-                name="ACV medio"
-                stroke="#f97316"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 5 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        {/* Pipeline Ponderado — apenas ponto atual da API; série histórica não disponível */}
+        {weightedData ? (
+          <ChartCard
+            title="Pipeline Ponderado"
+            subtitle="Bloco 5: valor atual do pipeline ponderado e ACV médio."
+            height={320}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={weightedData}>
+                <defs>
+                  <linearGradient id="pipelineFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.24} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
+                <XAxis dataKey="semana" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }}
+                  tickFormatter={(value) => `${Math.round(toNumber(value) / 1000)}k`} />
+                <Tooltip formatter={(value: ValueType | undefined, name: NameType | undefined) =>
+                  [formatCompactCurrency(tooltipNumber(value)), name === "pipeline" ? "Pipeline" : "Referencia"]} />
+                <Legend />
+                <ReferenceLine y={targetMrr * 3} stroke="#10b981" strokeDasharray="4 4" label="Meta 3x" />
+                <Area isAnimationActive animationDuration={250} animationEasing="ease-out"
+                  type="monotone" dataKey="pipeline" name="Pipeline ponderado"
+                  stroke="#2563eb" fill="url(#pipelineFill)" strokeWidth={3} />
+                <Line isAnimationActive animationDuration={1200} animationBegin={120} animationEasing="ease-out"
+                  type="monotone" dataKey="acv" name="ACV medio" stroke="#f97316"
+                  strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        ) : (
+          <NoDataPlaceholder eyebrow="Painel superior" title="Pipeline Ponderado"
+            subtitle="Bloco 5: serie semanal do pipeline ponderado." />
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-        <ChartCard
-          title="Leads por Origem"
-          subtitle="Bloco 1: leitura visual do topo do funil por canal dominante."
-          eyebrow="Detalhe"
-          height={250}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Tooltip formatter={(value: ValueType | undefined) => [`${Math.round(tooltipNumber(value))}`, "Leads"]} />
-              <Legend />
-              <Pie
-                isAnimationActive
-                animationDuration={1000}
-                animationEasing="ease-out"
-                data={leadSourceData}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={48}
-                outerRadius={82}
-                paddingAngle={3}
-                onClick={(entry) =>
-                  setChartFilter({
-                    dimension: "source",
-                    value: String(entry?.name ?? ""),
-                    label: `Origem ${String(entry?.name ?? "")}`,
-                  })
-                }
-              >
-                {leadSourceData.map((entry) => (
-                  <Cell
-                    key={entry.name}
-                    fill={entry.color}
-                    fillOpacity={!chartFilter || chartFilter.value === entry.name ? 1 : 0.4}
-                    style={{ cursor: "pointer" }}
-                  />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartCard>
+        {/* Leads por Origem — distribuição por canal não está na API */}
+        <NoDataPlaceholder title="Leads por Origem"
+          subtitle="Bloco 1: distribuição por canal não disponível na API." />
 
-        <ChartCard
-          title="Conversao por Etapa"
-          subtitle="Blocos 1 e 2: atual vs meta nas conversoes criticas do funil."
-          eyebrow="Detalhe"
-          height={250}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={conversionData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
-              <XAxis dataKey="etapa" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} domain={[0, 100]} />
-              <Tooltip formatter={(value: ValueType | undefined) => [`${Math.round(tooltipNumber(value))}%`, "Taxa"]} />
-              <Legend />
-              <Bar
-                isAnimationActive
-                animationDuration={900}
-                animationEasing="ease-out"
-                dataKey="atual"
-                name="Atual"
-                fill="#f97316"
-                radius={[8, 8, 0, 0]}
-                onClick={(entry) =>
-                  setChartFilter({
-                    dimension: "stage",
-                    value:
-                      funnelStage(entry).includes("Fech.")
-                        ? "Proposta enviada"
-                        : funnelStage(entry).includes("Qualif.")
-                          ? "Call Fechamento"
-                          : "Call Qualificacao",
-                    label: `Conversao ${funnelStage(entry)}`,
-                  })
-                }
-              />
-              <Line isAnimationActive animationDuration={1100} animationBegin={100} animationEasing="ease-out" type="monotone" dataKey="meta" name="Meta" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard
-          title="Ciclo Medio Lead > Contrato"
-          subtitle="Bloco 2: comparar OS x Advisory para localizar gargalo comercial."
-          eyebrow="Detalhe"
-          height={250}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={cycleData} barGap={16}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
-              <XAxis dataKey="produto" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
-              <Tooltip formatter={(value: ValueType | undefined) => [`${Math.round(tooltipNumber(value))} dias`, "Ciclo"]} />
-              <Legend />
-              <Bar
-                isAnimationActive
-                animationDuration={250}
-                animationEasing="ease-out"
-                dataKey="dias"
-                name="Dias"
-                radius={[8, 8, 0, 0]}
-                onClick={(entry) => {
-                  const produto = cycleProduct(entry).toUpperCase() === "ADVISORY" ? "ADVISORY" : "OS";
-                  setProduct(produto as "OS" | "ADVISORY");
-                  setChartFilter({ dimension: "product", value: produto, label: `Produto ${produto}` });
-                }}
-              >
-                {cycleData.map((entry) => (
-                  <Cell key={entry.produto} fill={entry.color} style={{ cursor: "pointer" }} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard
-          title="OS vs Advisory"
-          subtitle="Blocos 3 e 4: recorrencia do OS versus renovacao e base ativa do Advisory."
-          eyebrow="Detalhe"
-          height={250}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={osVsAdvisoryData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
-              <XAxis dataKey="eixo" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
-              <Tooltip formatter={(value: ValueType | undefined, _name: NameType | undefined, item) => [`${Math.round(tooltipNumber(value))}${item?.dataKey === "atual" ? "%" : ""}`, item?.dataKey === "meta" ? "Meta" : "Atual"]} />
-              <Legend />
-              <Bar
-                isAnimationActive
-                animationDuration={900}
-                animationEasing="ease-out"
-                dataKey="atual"
-                name="Atual"
-                fill="#14b8a6"
-                radius={[8, 8, 0, 0]}
-                onClick={(entry) => {
-                  const eixo = advisoryAxis(entry);
-                  if (eixo.includes("Advisory")) {
-                    setProduct("ADVISORY");
-                    setChartFilter({ dimension: "product", value: "ADVISORY", label: "Produto ADVISORY" });
-                    return;
+        {/* Conversão por Etapa — dados reais da API */}
+        {conversionData ? (
+          <ChartCard title="Conversao por Etapa"
+            subtitle="Blocos 1 e 2: atual vs meta nas conversoes criticas do funil."
+            eyebrow="Detalhe" height={250}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={conversionData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
+                <XAxis dataKey="etapa" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} domain={[0, 100]} />
+                <Tooltip formatter={(value: ValueType | undefined) => [`${Math.round(tooltipNumber(value))}%`, "Taxa"]} />
+                <Legend />
+                <Bar isAnimationActive animationDuration={900} animationEasing="ease-out"
+                  dataKey="atual" name="Atual" fill="#f97316" radius={[8, 8, 0, 0]}
+                  onClick={(entry) =>
+                    setChartFilter({
+                      dimension: "stage",
+                      value: funnelStage(entry).includes("Fech.") ? "Proposta enviada"
+                        : funnelStage(entry).includes("Qualif.") ? "Call Fechamento" : "Call Qualificacao",
+                      label: `Conversao ${funnelStage(entry)}`,
+                    })
                   }
-                  setProduct("OS");
-                  setChartFilter({ dimension: "product", value: "OS", label: `Produto ${eixo.includes("Setups") ? "OS Setup" : "OS"}` });
-                }}
-              />
-              <Line isAnimationActive animationDuration={1080} animationBegin={100} animationEasing="ease-out" type="monotone" dataKey="meta" name="Meta" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartCard>
+                />
+                <Line isAnimationActive animationDuration={1100} animationBegin={100} animationEasing="ease-out"
+                  type="monotone" dataKey="meta" name="Meta" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        ) : (
+          <NoDataPlaceholder title="Conversao por Etapa"
+            subtitle="Blocos 1 e 2: atual vs meta nas conversoes criticas do funil." />
+        )}
+
+        {/* Ciclo Médio por produto — API tem apenas valor agregado, sem breakdown OS/Advisory */}
+        <NoDataPlaceholder title="Ciclo Medio Lead > Contrato"
+          subtitle="Bloco 2: breakdown OS x Advisory não disponível na API." />
+
+        {/* OS vs Advisory — dados reais da API */}
+        {osVsAdvisoryData ? (
+          <ChartCard title="OS vs Advisory"
+            subtitle="Blocos 3 e 4: recorrencia do OS versus renovacao e base ativa do Advisory."
+            eyebrow="Detalhe" height={250}>
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={osVsAdvisoryData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf2f7" />
+                <XAxis dataKey="eixo" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 11 }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
+                <Tooltip formatter={(value: ValueType | undefined, _name: NameType | undefined, item) =>
+                  [`${Math.round(tooltipNumber(value))}${item?.dataKey === "atual" ? "%" : ""}`, item?.dataKey === "meta" ? "Meta" : "Atual"]} />
+                <Legend />
+                <Bar isAnimationActive animationDuration={900} animationEasing="ease-out"
+                  dataKey="atual" name="Atual" fill="#14b8a6" radius={[8, 8, 0, 0]}
+                  onClick={(entry) => {
+                    const eixo = advisoryAxis(entry);
+                    if (eixo.includes("Advisory")) { setProduct("ADVISORY"); setChartFilter({ dimension: "product", value: "ADVISORY", label: "Produto ADVISORY" }); return; }
+                    setProduct("OS");
+                    setChartFilter({ dimension: "product", value: "OS", label: `Produto ${eixo.includes("Setups") ? "OS Setup" : "OS"}` });
+                  }}
+                />
+                <Line isAnimationActive animationDuration={1080} animationBegin={100} animationEasing="ease-out"
+                  type="monotone" dataKey="meta" name="Meta" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        ) : (
+          <NoDataPlaceholder title="OS vs Advisory"
+            subtitle="Blocos 3 e 4: recorrencia do OS versus renovacao e base ativa do Advisory." />
+        )}
       </div>
     </div>
   );
